@@ -1,5 +1,6 @@
 // api.ts
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "https://hrms-server-siyan.vercel.app/api";
 
 export const api = {
   async post(endpoint: string, data: any) {
