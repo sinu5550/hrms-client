@@ -126,3 +126,28 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Professional Custom Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: oklch(0.556 0.05 247.79 / 0.4); /* subtle muted gray */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-primary); /* bright brand green on hover */
+}
+
+/* Firefox compatibility */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.556 0.05 247.79 / 0.4) transparent;
+}

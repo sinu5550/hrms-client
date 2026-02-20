@@ -1,47 +1,54 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
-import { ArrowLeft, Upload, FileText, Award, IdCard, Sparkles } from 'lucide-react';
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { Upload, FileText, Award, IdCard, Sparkles } from "lucide-react";
 
 export default function EmployeeCreate() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('basic');
+  const [activeTab, setActiveTab] = useState("basic");
   const [aiParsing, setAiParsing] = useState(false);
 
   const [formData, setFormData] = useState({
     // Basic Info
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    dateOfBirth: '',
-    gender: '',
-    address: '',
-    
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    dateOfBirth: "",
+    gender: "",
+    address: "",
+
     // Employment Info
-    employeeId: '',
-    department: '',
-    designation: '',
-    joiningDate: '',
-    employmentType: 'Full-time',
-    reportingManager: '',
-    
+    employeeId: "",
+    department: "",
+    designation: "",
+    joiningDate: "",
+    employmentType: "Full-time",
+    reportingManager: "",
+
     // Documents
     nid: null as File | null,
     cv: null as File | null,
     certificates: [] as File[],
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
+  ) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
+  const handleFileUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: string,
+  ) => {
     const files = e.target.files;
     if (files) {
-      if (field === 'certificates') {
+      if (field === "certificates") {
         setFormData({ ...formData, [field]: Array.from(files) });
       } else {
         setFormData({ ...formData, [field]: files[0] });
@@ -57,13 +64,13 @@ export default function EmployeeCreate() {
       setAiParsing(true);
       setTimeout(() => {
         // Auto-fill data from "AI parsing"
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
-          firstName: 'John',
-          lastName: 'Doe',
-          email: 'john.doe@email.com',
-          phone: '+1234567890',
-          designation: 'Software Engineer',
+          firstName: "John",
+          lastName: "Doe",
+          email: "john.doe@email.com",
+          phone: "+1234567890",
+          designation: "Software Engineer",
         }));
         setAiParsing(false);
       }, 2000);
@@ -73,39 +80,39 @@ export default function EmployeeCreate() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Handle form submission
-    navigate('/employees');
+    navigate("/employees");
   };
 
   const tabs = [
-    { id: 'basic', label: 'Basic Information', icon: IdCard },
-    { id: 'employment', label: 'Employment Details', icon: FileText },
-    { id: 'documents', label: 'Documents', icon: Award },
+    { id: "basic", label: "Basic Information", icon: IdCard },
+    { id: "employment", label: "Employment Details", icon: FileText },
+    { id: "documents", label: "Documents", icon: Award },
   ];
 
   return (
     <div className="p-8">
       {/* Header */}
       <div className="mb-6">
-        <button
-          onClick={() => navigate('/employees')}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Employees
-        </button>
-        <h1 className="text-3xl font-semibold text-gray-800">Add New Employee</h1>
+        <h1 className="text-3xl font-semibold text-gray-800">
+          Add New Employee
+        </h1>
         <p className="text-gray-600 mt-1">Create a new employee profile</p>
       </div>
 
       {/* AI Resume Upload Section */}
-      <div className="bg-gradient-to-r from-[#1a5f3f] to-[#2d8f5f] rounded-lg shadow-sm p-6 mb-6 text-white">
+      <div className="bg-linear-to-r from-[#1a5f3f] to-[#2d8f5f] rounded-lg shadow-sm p-6 mb-6 text-white">
         <div className="flex items-start gap-4">
           <div className="bg-white/20 p-3 rounded-lg">
             <Sparkles className="w-6 h-6" />
           </div>
           <div className="flex-1">
-            <h3 className="text-lg font-semibold mb-2">AI-Powered Resume Parsing</h3>
-            <p className="text-white/90 mb-4">Upload a resume and let AI automatically extract information including skills, experience, and education</p>
+            <h3 className="text-lg font-semibold mb-2">
+              AI-Powered Resume Parsing
+            </h3>
+            <p className="text-white/90 mb-4">
+              Upload a resume and let AI automatically extract information
+              including skills, experience, and education
+            </p>
             <label className="inline-block">
               <input
                 type="file"
@@ -115,7 +122,7 @@ export default function EmployeeCreate() {
               />
               <span className="bg-white text-[#1a5f3f] px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors inline-flex items-center gap-2">
                 <Upload className="w-4 h-4" />
-                {aiParsing ? 'Parsing Resume...' : 'Upload Resume'}
+                {aiParsing ? "Parsing Resume..." : "Upload Resume"}
               </span>
             </label>
           </div>
@@ -134,8 +141,8 @@ export default function EmployeeCreate() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors ${
                     activeTab === tab.id
-                      ? 'text-[#1a5f3f] border-b-2 border-[#1a5f3f]'
-                      : 'text-gray-600 hover:text-gray-800'
+                      ? "text-[#1a5f3f] border-b-2 border-[#1a5f3f]"
+                      : "text-gray-600 hover:text-gray-800"
                   }`}
                 >
                   <tab.icon className="w-5 h-5" />
@@ -147,7 +154,7 @@ export default function EmployeeCreate() {
 
           <div className="p-6">
             {/* Basic Information Tab */}
-            {activeTab === 'basic' && (
+            {activeTab === "basic" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -251,7 +258,7 @@ export default function EmployeeCreate() {
             )}
 
             {/* Employment Details Tab */}
-            {activeTab === 'employment' && (
+            {activeTab === "employment" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -353,26 +360,31 @@ export default function EmployeeCreate() {
             )}
 
             {/* Documents Tab */}
-            {activeTab === 'documents' && (
+            {activeTab === "documents" && (
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    National ID / Passport <span className="text-red-500">*</span>
+                    National ID / Passport{" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[#1a5f3f] transition-colors">
                     <input
                       type="file"
                       accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={(e) => handleFileUpload(e, 'nid')}
+                      onChange={(e) => handleFileUpload(e, "nid")}
                       className="hidden"
                       id="nid-upload"
                     />
                     <label htmlFor="nid-upload" className="cursor-pointer">
                       <IdCard className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                       <p className="text-gray-600">
-                        {formData.nid ? formData.nid.name : 'Click to upload NID/Passport'}
+                        {formData.nid
+                          ? formData.nid.name
+                          : "Click to upload NID/Passport"}
                       </p>
-                      <p className="text-sm text-gray-500 mt-1">PDF, JPG, PNG up to 5MB</p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        PDF, JPG, PNG up to 5MB
+                      </p>
                     </label>
                   </div>
                 </div>
@@ -385,16 +397,20 @@ export default function EmployeeCreate() {
                     <input
                       type="file"
                       accept=".pdf,.doc,.docx"
-                      onChange={(e) => handleFileUpload(e, 'cv')}
+                      onChange={(e) => handleFileUpload(e, "cv")}
                       className="hidden"
                       id="cv-upload"
                     />
                     <label htmlFor="cv-upload" className="cursor-pointer">
                       <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                       <p className="text-gray-600">
-                        {formData.cv ? formData.cv.name : 'Click to upload Resume/CV'}
+                        {formData.cv
+                          ? formData.cv.name
+                          : "Click to upload Resume/CV"}
                       </p>
-                      <p className="text-sm text-gray-500 mt-1">PDF, DOC, DOCX up to 5MB</p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        PDF, DOC, DOCX up to 5MB
+                      </p>
                     </label>
                   </div>
                 </div>
@@ -408,18 +424,20 @@ export default function EmployeeCreate() {
                       type="file"
                       accept=".pdf,.jpg,.jpeg,.png"
                       multiple
-                      onChange={(e) => handleFileUpload(e, 'certificates')}
+                      onChange={(e) => handleFileUpload(e, "certificates")}
                       className="hidden"
                       id="cert-upload"
                     />
                     <label htmlFor="cert-upload" className="cursor-pointer">
                       <Award className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                       <p className="text-gray-600">
-                        {formData.certificates.length > 0 
-                          ? `${formData.certificates.length} file(s) selected` 
-                          : 'Click to upload Certificates'}
+                        {formData.certificates.length > 0
+                          ? `${formData.certificates.length} file(s) selected`
+                          : "Click to upload Certificates"}
                       </p>
-                      <p className="text-sm text-gray-500 mt-1">Multiple files allowed</p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Multiple files allowed
+                      </p>
                     </label>
                   </div>
                 </div>
@@ -432,7 +450,7 @@ export default function EmployeeCreate() {
         <div className="flex justify-end gap-4">
           <button
             type="button"
-            onClick={() => navigate('/employees')}
+            onClick={() => navigate("/employees")}
             className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cancel

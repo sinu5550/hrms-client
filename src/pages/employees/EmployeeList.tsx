@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import {
-  Plus,
   Search,
   Filter,
   Download,
@@ -24,8 +23,7 @@ interface Employee {
 
 export default function EmployeeList() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterDepartment, setFilterDepartment] =
-    useState("all");
+  const [filterDepartment, setFilterDepartment] = useState("all");
 
   const employees: Employee[] = [
     {
@@ -101,18 +99,11 @@ export default function EmployeeList() {
 
   const filteredEmployees = employees.filter((emp) => {
     const matchesSearch =
-      emp.name
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      emp.email
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      emp.designation
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
+      emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      emp.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      emp.designation.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesDepartment =
-      filterDepartment === "all" ||
-      emp.department === filterDepartment;
+      filterDepartment === "all" || emp.department === filterDepartment;
     return matchesSearch && matchesDepartment;
   });
 
@@ -128,13 +119,6 @@ export default function EmployeeList() {
             Manage employee profiles and information
           </p>
         </div>
-        <Link
-          to="/employees/new"
-          className="bg-[#1a5f3f] hover:bg-[#155233] text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          Add Employee
-        </Link>
       </div>
 
       {/* Filters and Search */}
@@ -159,9 +143,7 @@ export default function EmployeeList() {
             <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <select
               value={filterDepartment}
-              onChange={(e) =>
-                setFilterDepartment(e.target.value)
-              }
+              onChange={(e) => setFilterDepartment(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5f3f] focus:border-transparent appearance-none bg-white"
             >
               {departments.map((dept) => (
@@ -285,8 +267,7 @@ export default function EmployeeList() {
         {/* Results Info */}
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
           <p className="text-sm text-gray-600">
-            Showing {filteredEmployees.length} of{" "}
-            {employees.length} employees
+            Showing {filteredEmployees.length} of {employees.length} employees
           </p>
         </div>
       </div>

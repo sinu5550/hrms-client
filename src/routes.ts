@@ -4,6 +4,9 @@ import Dashboard from "./pages/Dashboard";
 import EmployeeList from "./pages/employees/EmployeeList";
 import EmployeeCreate from "./pages/employees/EmployeeCreate";
 import EmployeeDetail from "./pages/employees/EmployeeDetail";
+import Departments from "./pages/employees/Departments";
+import Designations from "./pages/employees/Designations";
+import Policies from "./pages/employees/Policies";
 import Attendance from "./pages/attendance/Attendance";
 import AttendanceRecords from "./pages/attendance/AttendanceRecords";
 import LeaveManagement from "./pages/leave/LeaveManagement";
@@ -37,6 +40,9 @@ export const router = createBrowserRouter([
       { index: true, Component: Dashboard },
       { path: "employees", Component: EmployeeList },
       { path: "employees/new", Component: EmployeeCreate },
+      { path: "employees/departments", Component: Departments },
+      { path: "employees/designations", Component: Designations },
+      { path: "employees/policies", Component: Policies },
       { path: "employees/:id", Component: EmployeeDetail },
       { path: "attendance", Component: Attendance },
       { path: "attendance/records", Component: AttendanceRecords },

@@ -19,6 +19,7 @@ import {
 
 export default function Layout() {
   const [hrmsExpanded, setHrmsExpanded] = useState(true);
+  const [employeesExpanded, setEmployeesExpanded] = useState(false);
   const location = useLocation();
 
   const isActive = (path: string) => {
@@ -34,7 +35,17 @@ export default function Layout() {
       name: "HRMS",
       icon: Users,
       subItems: [
-        { name: "Employees", path: "/employees", icon: Users },
+        {
+          name: "Employees",
+          icon: Users,
+          nestedItems: [
+            { name: "Add Employee", path: "/employees/new" },
+            { name: "Employee List", path: "/employees" },
+            { name: "Departments", path: "/employees/departments" },
+            { name: "Designation", path: "/employees/designations" },
+            { name: "Policies", path: "/employees/policies" },
+          ],
+        },
         { name: "Attendance", path: "/attendance", icon: Calendar },
         { name: "Leave", path: "/leave", icon: Plane },
         { name: "Payroll", path: "/payroll", icon: DollarSign },
@@ -100,18 +111,58 @@ export default function Layout() {
               {item.subItems && hrmsExpanded && (
                 <div className="bg-[#3a3a3a] py-1">
                   {item.subItems.map((subItem) => (
-                    <Link
-                      key={subItem.name}
-                      to={subItem.path}
-                      className={`w-full flex items-center gap-3 px-6 pl-14 py-2.5 transition-colors ${
-                        isActive(subItem.path)
-                          ? "bg-primary text-white border-l-4 border-primary/80"
-                          : "hover:bg-[#424242] text-gray-300"
-                      }`}
-                    >
-                      <subItem.icon className="w-4 h-4" />
-                      <span>{subItem.name}</span>
-                    </Link>
+                    <div key={subItem.name}>
+                      {subItem.nestedItems ? (
+                        <>
+                          <button
+                            onClick={() =>
+                              setEmployeesExpanded(!employeesExpanded)
+                            }
+                            className="w-full flex items-center justify-between px-6 pl-14 py-2.5 transition-colors hover:bg-[#424242] text-gray-300"
+                          >
+                            <div className="flex items-center gap-3">
+                              <subItem.icon className="w-4 h-4" />
+                              <span>{subItem.name}</span>
+                            </div>
+                            {employeesExpanded ? (
+                              <ChevronDown className="w-4 h-4" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4" />
+                            )}
+                          </button>
+                          {employeesExpanded && (
+                            <div className="bg-[#2a2a2a] py-1">
+                              {subItem.nestedItems.map((nested) => (
+                                <Link
+                                  key={nested.name}
+                                  to={nested.path}
+                                  className={`w-full flex items-center gap-3 px-6 pl-20 py-2.5 transition-colors ${
+                                    isActive(nested.path) &&
+                                    location.pathname === nested.path
+                                      ? "text-white border-l-4 border-primary/80"
+                                      : "hover:bg-[#424242] text-gray-400"
+                                  }`}
+                                >
+                                  <span className="text-sm">{nested.name}</span>
+                                </Link>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <Link
+                          to={subItem.path!}
+                          className={`w-full flex items-center gap-3 px-6 pl-14 py-2.5 transition-colors ${
+                            isActive(subItem.path!)
+                              ? "bg-primary text-white border-l-4 border-primary/80"
+                              : "hover:bg-[#424242] text-gray-300"
+                          }`}
+                        >
+                          <subItem.icon className="w-4 h-4" />
+                          <span>{subItem.name}</span>
+                        </Link>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
