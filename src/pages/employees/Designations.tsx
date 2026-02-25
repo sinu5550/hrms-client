@@ -8,7 +8,7 @@ import {
   Home,
   ChevronRight,
   Download,
-  Settings,
+  // Settings,
   ChevronLeft,
   X,
 } from "lucide-react";
