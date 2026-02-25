@@ -49,11 +49,6 @@ export default function SignIn() {
         <CardDescription>
           Enter your email below to login to your account
         </CardDescription>
-        <CardAction>
-          <Button variant="link" asChild className="p-0 h-auto">
-            <Link to="/register">Sign Up</Link>
-          </Button>
-        </CardAction>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit}>

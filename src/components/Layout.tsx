@@ -39,7 +39,6 @@ export default function Layout() {
           name: "Employees",
           icon: Users,
           nestedItems: [
-            { name: "Add Employee", path: "/employees/new" },
             { name: "Employee List", path: "/employees" },
             { name: "Departments", path: "/employees/departments" },
             { name: "Designation", path: "/employees/designations" },

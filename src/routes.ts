@@ -2,7 +2,6 @@ import { createBrowserRouter } from "react-router";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import EmployeeList from "./pages/employees/EmployeeList";
-import EmployeeCreate from "./pages/employees/EmployeeCreate";
 import EmployeeDetail from "./pages/employees/EmployeeDetail";
 import Departments from "./pages/employees/Departments";
 import Designations from "./pages/employees/Designations";
@@ -30,7 +29,6 @@ import AIAssistant from "./pages/AIAssistant";
 import Settings from "./pages/Settings";
 import AuthLayout from "./components/AuthLayout";
 import SignIn from "./pages/SignIn";
-import Register from "./pages/Register";
 
 export const router = createBrowserRouter([
   {
@@ -39,7 +37,6 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: Dashboard },
       { path: "employees", Component: EmployeeList },
-      { path: "employees/new", Component: EmployeeCreate },
       { path: "employees/departments", Component: Departments },
       { path: "employees/designations", Component: Designations },
       { path: "employees/policies", Component: Policies },
@@ -70,9 +67,6 @@ export const router = createBrowserRouter([
   {
     path: "/",
     Component: AuthLayout,
-    children: [
-      { path: "signin", Component: SignIn },
-      { path: "register", Component: Register },
-    ],
+    children: [{ path: "signin", Component: SignIn }],
   },
 ]);
