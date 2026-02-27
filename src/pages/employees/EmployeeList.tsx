@@ -11,9 +11,12 @@ import {
   Plus,
   X,
   EyeOff,
+  Home,
+  ChevronRight,
 } from "lucide-react";
 import { api } from "../../lib/api";
 import { toast } from "sonner";
+import { useData } from "../../contexts/DataContext";
 
 interface Employee {
   id: string;
@@ -24,27 +27,22 @@ interface Employee {
   designation?: { name: string };
   joiningDate: string;
   status: "Active" | "Inactive";
-}
-
-interface Department {
-  id: string;
-  name: string;
-}
-
-interface Designation {
-  id: string;
-  name: string;
-  departmentId: string;
+  role: string;
 }
 
 export default function EmployeeList() {
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    employees: globalEmployees,
+    departments,
+    designations,
+    isLoading,
+    refreshData,
+  } = useData();
+  const [employees, setEmployees] = useState<Employee[]>(globalEmployees);
+  const [loading, setLoading] = useState(isLoading);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterDepartment, setFilterDepartment] = useState("all");
   const [departmentNames, setDepartmentNames] = useState<string[]>(["all"]);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [designations, setDesignations] = useState<Designation[]>([]);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -66,22 +64,22 @@ export default function EmployeeList() {
     about: "",
   });
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [empData, deptData, desigData] = await Promise.all([
-        api.get("/users"),
-        api.get("/departments"),
-        api.get("/designations"),
+  useEffect(() => {
+    setEmployees(globalEmployees);
+    setLoading(isLoading);
+
+    if (globalEmployees.length > 0) {
+      setDepartmentNames([
+        "all",
+        ...Array.from(
+          new Set(
+            globalEmployees.map((e: any) => e.department?.name).filter(Boolean),
+          ),
+        ),
       ]);
 
-      setEmployees(empData);
-      setDepartments(deptData);
-      setDepartmentNames(["all", ...deptData.map((d: any) => d.name)]);
-      setDesignations(desigData);
-
       // Calculate next EMP ID
-      const lastEmp = empData
+      const lastEmp = globalEmployees
         .filter((u: any) => u.employeeId?.startsWith("EMP-"))
         .sort((a: any, b: any) => {
           const numA = parseInt(a.employeeId.replace("EMP-", ""), 10);
@@ -92,19 +90,9 @@ export default function EmployeeList() {
       if (lastEmp && lastEmp.employeeId) {
         const num = parseInt(lastEmp.employeeId.replace("EMP-", ""), 10);
         setNextEmpId(`EMP-${String(num + 1).padStart(4, "0")}`);
-      } else {
-        setNextEmpId("EMP-0001");
       }
-    } catch (error) {
-      toast.error("Failed to fetch data");
-    } finally {
-      setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  }, [globalEmployees, isLoading]);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -142,7 +130,7 @@ export default function EmployeeList() {
         designationId: "",
         about: "",
       });
-      fetchData();
+      refreshData();
     } catch (error: any) {
       toast.error(error.message || "Failed to create employee");
     } finally {
@@ -171,17 +159,21 @@ export default function EmployeeList() {
           <h1 className="text-3xl font-semibold text-gray-800">
             Employee Management
           </h1>
-          <p className="text-gray-600 mt-1">
-            Manage employee profiles and information
-          </p>
+          <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
+            <Link to="/" className="hover:text-[#1a5f3f] transition-colors">
+              <Home className="w-4 h-4" />
+            </Link>
+            <ChevronRight className="w-4 h-4" />
+            <span className="text-[#1a5f3f] font-medium">Employees</span>
+          </div>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
+        <Link
+          to="/employees/create"
           className="flex items-center gap-2 px-4 py-2 bg-[#1a5f3f] text-white rounded-lg hover:bg-[#155233] transition-colors shadow-sm font-semibold"
         >
           <Plus className="w-5 h-5" />
           Add Employee
-        </button>
+        </Link>
       </div>
 
       {/* Filters and Search */}

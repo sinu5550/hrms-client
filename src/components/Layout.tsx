@@ -20,6 +20,7 @@ import {
 export default function Layout() {
   const [hrmsExpanded, setHrmsExpanded] = useState(true);
   const [employeesExpanded, setEmployeesExpanded] = useState(false);
+  const [payrollExpanded, setPayrollExpanded] = useState(false);
   const location = useLocation();
 
   const isActive = (path: string) => {
@@ -47,7 +48,14 @@ export default function Layout() {
         },
         { name: "Attendance", path: "/attendance", icon: Calendar },
         { name: "Leave", path: "/leave", icon: Plane },
-        { name: "Payroll", path: "/payroll", icon: DollarSign },
+        {
+          name: "Payroll",
+          icon: DollarSign,
+          nestedItems: [
+            { name: "Employee Salary", path: "/payroll/salaries" },
+            { name: "Payroll Items", path: "/payroll/items" },
+          ],
+        },
         {
           name: "Meal & Expense",
           path: "/meal-expense",
@@ -114,22 +122,32 @@ export default function Layout() {
                       {subItem.nestedItems ? (
                         <>
                           <button
-                            onClick={() =>
-                              setEmployeesExpanded(!employeesExpanded)
-                            }
+                            onClick={() => {
+                              if (subItem.name === "Employees")
+                                setEmployeesExpanded(!employeesExpanded);
+                              if (subItem.name === "Payroll")
+                                setPayrollExpanded(!payrollExpanded);
+                            }}
                             className="w-full flex items-center justify-between px-6 pl-14 py-2.5 transition-colors hover:bg-[#424242] text-gray-300"
                           >
                             <div className="flex items-center gap-3">
                               <subItem.icon className="w-4 h-4" />
                               <span>{subItem.name}</span>
                             </div>
-                            {employeesExpanded ? (
+                            {(
+                              subItem.name === "Employees"
+                                ? employeesExpanded
+                                : payrollExpanded
+                            ) ? (
                               <ChevronDown className="w-4 h-4" />
                             ) : (
                               <ChevronRight className="w-4 h-4" />
                             )}
                           </button>
-                          {employeesExpanded && (
+                          {((subItem.name === "Employees" &&
+                            employeesExpanded) ||
+                            (subItem.name === "Payroll" &&
+                              payrollExpanded)) && (
                             <div className="bg-[#2a2a2a] py-1">
                               {subItem.nestedItems.map((nested) => (
                                 <Link

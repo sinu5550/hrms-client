@@ -1,40 +1,34 @@
 import { useParams, Link } from "react-router";
-import { ArrowLeft, Download, Building, DollarSign } from "lucide-react";
+import { Download, ChevronRight, Home } from "lucide-react";
 
 export default function Payslip() {
-  // id is available for data fetching if needed
   useParams();
 
   const payslip = {
-    employeeId: "EMP001",
-    employeeName: "Sarah Johnson",
-    designation: "Senior Software Engineer",
+    payslipNo: "#PS4283",
+    salaryMonth: "October 2024",
+    employeeId: "EMP-001",
+    employeeName: "Anthony Lewis",
+    designation: "Web Designer",
     department: "Engineering",
-    joiningDate: "2022-03-15",
-    bankAccount: "**** **** **** 4523",
-    month: "February 2026",
-    paymentDate: "2026-03-01",
-    workingDays: 20,
-    presentDays: 20,
-    leaveDays: 0,
-    weekends: 8,
-    holidays: 2,
-    overtimeHours: 5,
+    joiningDate: "2024-09-12",
+    companyName: "XYZ Technologies",
+    companyAddress: "2077 Chicago Avenue Orosi, CA 93647",
+    companyEmail: "xyztech@example.com",
+    companyPhone: "+1 987 654 3210",
 
     earnings: [
-      { name: "Basic Salary", amount: 5000, taxable: true },
-      { name: "House Rent Allowance", amount: 2000, taxable: true },
-      { name: "Transport Allowance", amount: 500, taxable: false },
-      { name: "Medical Allowance", amount: 300, taxable: false },
-      { name: "Special Allowance", amount: 1000, taxable: true },
-      { name: "Overtime Pay", amount: 187.5, taxable: true },
+      { name: "Basic Salary", amount: 3000 },
+      { name: "House Rent Allowance (H.R.A.)", amount: 1000 },
+      { name: "Conveyance", amount: 200 },
+      { name: "Other Allowance", amount: 100 },
     ],
 
     deductions: [
-      { name: "Provident Fund", amount: 840 },
-      { name: "Income Tax", amount: 1050 },
-      { name: "Professional Tax", amount: 200 },
-      { name: "Meal Deduction", amount: 225 },
+      { name: "Tax Deducted at Source (T.D.S.)", amount: 200 },
+      { name: "Provident Fund", amount: 300 },
+      { name: "ESI", amount: 150 },
+      { name: "Loan", amount: 50 },
     ],
   };
 
@@ -48,227 +42,163 @@ export default function Payslip() {
   return (
     <div className="p-8">
       {/* Header */}
-      <div className="mb-6">
-        <Link
-          to="/payroll/processing"
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Payroll Processing
-        </Link>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold text-gray-800">Payslip</h1>
-            <p className="text-gray-600 mt-1">
-              Salary statement for {payslip.month}
-            </p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold text-gray-800">Payslip</h1>
+          <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
+            <Link to="/" className="hover:text-[#1a5f3f] transition-colors">
+              <Home className="w-4 h-4" />
+            </Link>
+            <ChevronRight className="w-4 h-4" />
+            <span>Payroll</span>
+            <ChevronRight className="w-4 h-4" />
+            <span className="text-[#1a5f3f] font-medium">Payslip</span>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#1a5f3f] hover:bg-[#155233] text-white rounded-lg transition-colors">
-            <Download className="w-5 h-5" />
-            Download PDF
+        </div>
+        <div className="flex items-center gap-3">
+          <button className="flex items-center gap-2 px-4 py-2 bg-[#2a2a2a] text-white rounded-lg hover:bg-black transition-colors font-semibold">
+            <Download className="w-4 h-4" /> Download
           </button>
         </div>
       </div>
 
-      {/* Payslip */}
-      <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden max-w-4xl mx-auto">
-        {/* Header Section */}
-        <div className="bg-gradient-to-r from-[#1a5f3f] to-[#2d8f5f] p-8 text-white">
-          <div className="flex items-start justify-between">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 md:p-12 max-w-5xl mx-auto">
+        {/* Company & Payslip Header */}
+        <div className="flex flex-col md:flex-row justify-between gap-8 mb-12">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-[#1a5f3f] rounded-full flex items-center justify-center text-white font-bold text-2xl">
+              S
+            </div>
             <div>
-              <div className="flex items-center gap-3 mb-2">
-                <Building className="w-8 h-8" />
-                <h2 className="text-2xl font-bold">HRMS Portal</h2>
-              </div>
-              <p className="text-white/80">
-                123 Business Street, San Francisco, CA 94105
-              </p>
-              <p className="text-white/80">contact@hrmsportal.com</p>
-            </div>
-            <div className="text-right">
-              <h3 className="text-xl font-semibold mb-1">PAYSLIP</h3>
-              <p className="text-white/80">{payslip.month}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Employee Information */}
-        <div className="p-8 border-b border-gray-200">
-          <div className="grid grid-cols-2 gap-8">
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm text-gray-500">Employee Name</p>
-                <p className="font-semibold text-gray-800">
-                  {payslip.employeeName}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Employee ID</p>
-                <p className="font-semibold text-gray-800">
-                  {payslip.employeeId}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Designation</p>
-                <p className="font-semibold text-gray-800">
-                  {payslip.designation}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Department</p>
-                <p className="font-semibold text-gray-800">
-                  {payslip.department}
-                </p>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm text-gray-500">Joining Date</p>
-                <p className="font-semibold text-gray-800">
-                  {payslip.joiningDate}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Bank Account</p>
-                <p className="font-semibold text-gray-800">
-                  {payslip.bankAccount}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Payment Date</p>
-                <p className="font-semibold text-gray-800">
-                  {payslip.paymentDate}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Attendance Summary */}
-        <div className="p-8 bg-gray-50 border-b border-gray-200">
-          <h3 className="font-semibold text-gray-800 mb-4">
-            Attendance Summary
-          </h3>
-          <div className="grid grid-cols-4 gap-4">
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-500">Working Days</p>
-              <p className="text-xl font-semibold text-gray-800">
-                {payslip.workingDays}
-              </p>
-            </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-500">Present Days</p>
-              <p className="text-xl font-semibold text-green-600">
-                {payslip.presentDays}
-              </p>
-            </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-500">Leave Days</p>
-              <p className="text-xl font-semibold text-orange-600">
-                {payslip.leaveDays}
-              </p>
-            </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-500">Overtime Hours</p>
-              <p className="text-xl font-semibold text-blue-600">
-                {payslip.overtimeHours}
+              <h2 className="text-2xl font-bold tracking-tight">SmartHR</h2>
+              <p className="text-sm text-gray-400 mt-1">
+                3099 Kennedy Court Framingham, MA 01702
               </p>
             </div>
           </div>
-        </div>
-
-        {/* Earnings and Deductions */}
-        <div className="p-8">
-          <div className="grid grid-cols-2 gap-8">
-            {/* Earnings */}
-            <div>
-              <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-green-600" />
-                Earnings
-              </h3>
-              <div className="space-y-3">
-                {payslip.earnings.map((earning, index) => (
-                  <div
-                    key={index}
-                    className="flex justify-between items-center py-2 border-b border-gray-100"
-                  >
-                    <div>
-                      <p className="text-gray-700">{earning.name}</p>
-                      {earning.taxable && (
-                        <p className="text-xs text-gray-500">Taxable</p>
-                      )}
-                    </div>
-                    <p className="font-medium text-gray-800">
-                      ${earning.amount.toFixed(2)}
-                    </p>
-                  </div>
-                ))}
-                <div className="flex justify-between items-center py-3 border-t-2 border-gray-300 font-semibold">
-                  <p className="text-gray-800">Total Earnings</p>
-                  <p className="text-green-600">${totalEarnings.toFixed(2)}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Deductions */}
-            <div>
-              <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-red-600" />
-                Deductions
-              </h3>
-              <div className="space-y-3">
-                {payslip.deductions.map((deduction, index) => (
-                  <div
-                    key={index}
-                    className="flex justify-between items-center py-2 border-b border-gray-100"
-                  >
-                    <p className="text-gray-700">{deduction.name}</p>
-                    <p className="font-medium text-gray-800">
-                      ${deduction.amount.toFixed(2)}
-                    </p>
-                  </div>
-                ))}
-                <div className="flex justify-between items-center py-3 border-t-2 border-gray-300 font-semibold">
-                  <p className="text-gray-800">Total Deductions</p>
-                  <p className="text-red-600">${totalDeductions.toFixed(2)}</p>
-                </div>
-              </div>
-            </div>
+          <div className="text-left md:text-right">
+            <h3 className="text-lg font-bold text-[#1a5f3f]">
+              Payslip No {payslip.payslipNo}
+            </h3>
+            <p className="text-sm text-gray-500 font-medium">
+              Salary Month :{" "}
+              <span className="text-gray-900">{payslip.salaryMonth}</span>
+            </p>
           </div>
         </div>
 
-        {/* Net Salary */}
-        <div className="bg-gradient-to-r from-[#1a5f3f] to-[#2d8f5f] p-8 text-white">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-white/80 mb-1">Net Salary</p>
-              <p className="text-4xl font-bold">${netSalary.toFixed(2)}</p>
-              <p className="text-white/80 mt-2 text-sm">
-                (In words:{" "}
-                {new Intl.NumberFormat("en-US", {
-                  style: "currency",
-                  currency: "USD",
-                }).format(netSalary)}
-                )
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-white/80 text-sm">
-                This is a computer-generated payslip
-              </p>
-              <p className="text-white/80 text-sm">
-                and does not require a signature
-              </p>
-            </div>
+        {/* Addresses */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-12">
+          <div>
+            <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
+              From
+            </h4>
+            <p className="font-bold text-lg text-gray-900">
+              {payslip.companyName}
+            </p>
+            <p className="text-gray-500 mt-1">{payslip.companyAddress}</p>
+            <p className="text-gray-500">Email : {payslip.companyEmail}</p>
+            <p className="text-gray-500">Phone : {payslip.companyPhone}</p>
+          </div>
+          <div>
+            <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
+              To
+            </h4>
+            <p className="font-bold text-lg text-gray-900">
+              {payslip.employeeName}
+            </p>
+            <p className="text-gray-500 mt-1">{payslip.designation}</p>
+            <p className="text-gray-500">Email : anthony@example.com</p>
+            <p className="text-gray-500">Phone : +1 458 268 4739</p>
           </div>
         </div>
 
-        {/* Footer Note */}
-        <div className="p-6 bg-gray-50 text-center text-sm text-gray-600">
-          <p>
-            For any queries regarding this payslip, please contact HR at
-            hr@hrmsportal.com
+        <div className="text-center mb-8">
+          <p className="font-bold text-gray-900 text-lg border-b-2 border-[#1a5f3f]/20 inline-block pb-1 px-4">
+            Payslip for the month of {payslip.salaryMonth}
           </p>
+        </div>
+
+        {/* Earnings & Deductions Tables */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Earnings */}
+          <div className="bg-gray-50 rounded-lg overflow-hidden border border-gray-100">
+            <div className="px-6 py-4 border-b border-gray-200/50 bg-white">
+              <h4 className="font-bold text-gray-800">Earnings</h4>
+            </div>
+            <div className="p-2">
+              <table className="w-full">
+                <tbody>
+                  {payslip.earnings.map((e, idx) => (
+                    <tr key={idx}>
+                      <td className="px-4 py-3 text-gray-600 font-medium">
+                        {e.name}
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-gray-900">
+                        ${e.amount}
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="border-t border-gray-200 bg-white text-[#1a5f3f]">
+                    <td className="px-4 py-4 font-bold">Total Earnings</td>
+                    <td className="px-4 py-4 text-right font-black">
+                      ${totalEarnings}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Deductions */}
+          <div className="bg-gray-50 rounded-lg overflow-hidden border border-gray-100">
+            <div className="px-6 py-4 border-b border-gray-200/50 bg-white">
+              <h4 className="font-bold text-gray-800">Deductions</h4>
+            </div>
+            <div className="p-2">
+              <table className="w-full">
+                <tbody>
+                  {payslip.deductions.map((d, idx) => (
+                    <tr key={idx}>
+                      <td className="px-4 py-3 text-gray-600 font-medium">
+                        {d.name}
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-gray-900">
+                        ${d.amount}
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="border-t border-gray-200 bg-white text-red-600">
+                    <td className="px-4 py-4 font-bold">Total Deductions</td>
+                    <td className="px-4 py-4 text-right font-black">
+                      ${totalDeductions}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Net Salary Footer */}
+        <div className="bg-gray-50 rounded-lg p-6 border border-gray-100">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+              <p className="text-gray-500 font-bold flex items-center gap-2">
+                Net Salary :{" "}
+                <span className="text-[#1a5f3f] text-2xl font-black">
+                  ${netSalary}
+                </span>
+                <span className="text-sm font-medium text-gray-400 ml-2">
+                  (Three thousand six hundred only)
+                </span>
+              </p>
+            </div>
+            <div className="text-gray-400 text-xs text-center md:text-right font-medium">
+              <p>This is a computer generated payslip</p>
+              <p>and does not require a signature</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

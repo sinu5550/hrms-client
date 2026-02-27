@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { api } from "../../lib/api";
 import { toast } from "sonner";
+import { useData } from "../../contexts/DataContext";
 
 interface Department {
   id: string;
@@ -33,9 +34,17 @@ interface Designation {
 }
 
 export default function Designations() {
-  const [designations, setDesignations] = useState<Designation[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    designations: globalDesignations,
+    departments: globalDepartments,
+    isLoading,
+    refreshData,
+  } = useData();
+  const [designations, setDesignations] =
+    useState<Designation[]>(globalDesignations);
+  const [departments, setDepartments] =
+    useState<Department[]>(globalDepartments);
+  const [loading, setLoading] = useState(isLoading);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -48,31 +57,11 @@ export default function Designations() {
     status: "Active" as "Active" | "Inactive",
   });
 
-  const fetchDesignations = async () => {
-    try {
-      setLoading(true);
-      const data = await api.get("/designations");
-      setDesignations(data);
-    } catch (error) {
-      toast.error("Failed to fetch designations");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchDepartments = async () => {
-    try {
-      const data = await api.get("/departments");
-      setDepartments(data);
-    } catch (error) {
-      console.error("Failed to fetch departments", error);
-    }
-  };
-
   useEffect(() => {
-    fetchDesignations();
-    fetchDepartments();
-  }, []);
+    setDesignations(globalDesignations);
+    setDepartments(globalDepartments);
+    setLoading(isLoading);
+  }, [globalDesignations, globalDepartments, isLoading]);
 
   const handleOpenModal = (designation?: Designation) => {
     if (designation) {
@@ -114,7 +103,7 @@ export default function Designations() {
         toast.success("Designation created successfully");
       }
       handleCloseModal();
-      fetchDesignations();
+      refreshData();
     } catch (error: any) {
       toast.error(error.message || "Failed to save designation");
     }
@@ -125,7 +114,7 @@ export default function Designations() {
       try {
         await api.delete(`/designations/${id}`);
         toast.success("Designation deleted successfully");
-        fetchDesignations();
+        refreshData();
       } catch (error: any) {
         toast.error(error.message || "Failed to delete designation");
       }

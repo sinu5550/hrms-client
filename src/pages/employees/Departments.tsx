@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { api } from "../../lib/api";
 import { toast } from "sonner";
+import { useData } from "../../contexts/DataContext";
 
 interface Manager {
   id: string;
@@ -36,9 +37,11 @@ interface User {
 }
 
 export default function Departments() {
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const { departments: globalDepartments, isLoading, refreshData } = useData();
+  const [departments, setDepartments] =
+    useState<Department[]>(globalDepartments);
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(isLoading);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [usersLoading, setUsersLoading] = useState(false);
@@ -51,18 +54,6 @@ export default function Departments() {
     status: "Active",
     managerId: "",
   });
-
-  const fetchDepartments = async () => {
-    try {
-      setLoading(true);
-      const data = await api.get("/departments");
-      setDepartments(data);
-    } catch (error) {
-      toast.error("Failed to fetch departments");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchUsers = async () => {
     try {
@@ -77,9 +68,13 @@ export default function Departments() {
   };
 
   useEffect(() => {
-    fetchDepartments();
     fetchUsers();
   }, []);
+
+  useEffect(() => {
+    setDepartments(globalDepartments);
+    setLoading(isLoading);
+  }, [globalDepartments, isLoading]);
 
   const handleOpenModal = (department?: Department) => {
     if (department) {
@@ -119,7 +114,7 @@ export default function Departments() {
         toast.success("Department created successfully");
       }
       handleCloseModal();
-      fetchDepartments();
+      refreshData();
     } catch (error: any) {
       toast.error(error.message || "Failed to save department");
     }
@@ -130,7 +125,7 @@ export default function Departments() {
       try {
         await api.delete(`/departments/${id}`);
         toast.success("Department deleted successfully");
-        fetchDepartments();
+        refreshData();
       } catch (error: any) {
         toast.error(error.message || "Failed to delete department");
       }

@@ -6,6 +6,7 @@ import EmployeeDetail from "./pages/employees/EmployeeDetail";
 import Departments from "./pages/employees/Departments";
 import Designations from "./pages/employees/Designations";
 import Policies from "./pages/employees/Policies";
+import EmployeeCreate from "./pages/employees/EmployeeCreate";
 import Attendance from "./pages/attendance/Attendance";
 import AttendanceRecords from "./pages/attendance/AttendanceRecords";
 import LeaveManagement from "./pages/leave/LeaveManagement";
@@ -15,10 +16,12 @@ import HolidayCalendar from "./pages/leave/HolidayCalendar";
 import MealExpense from "./pages/meal/MealExpense";
 import MealEntry from "./pages/meal/MealEntry";
 import ExpenseTracker from "./pages/meal/ExpenseTracker";
+import EmployeeSalary from "./pages/payroll/EmployeeSalary";
 import Payroll from "./pages/payroll/Payroll";
 import PayrollProcessing from "./pages/payroll/PayrollProcessing";
 import SalaryStructure from "./pages/payroll/SalaryStructure";
 import Payslip from "./pages/payroll/Payslip";
+import PayrollItems from "./pages/payroll/PayrollItems";
 import Timesheet from "./pages/timesheet/Timesheet";
 import TimesheetEntry from "./pages/timesheet/TimesheetEntry";
 import ProductivityReports from "./pages/timesheet/ProductivityReports";
@@ -40,6 +43,7 @@ export const router = createBrowserRouter([
       { path: "employees/departments", Component: Departments },
       { path: "employees/designations", Component: Designations },
       { path: "employees/policies", Component: Policies },
+      { path: "employees/create", Component: EmployeeCreate },
       { path: "employees/:id", Component: EmployeeDetail },
       { path: "attendance", Component: Attendance },
       { path: "attendance/records", Component: AttendanceRecords },
@@ -51,6 +55,8 @@ export const router = createBrowserRouter([
       { path: "meal-expense/entry", Component: MealEntry },
       { path: "meal-expense/tracker", Component: ExpenseTracker },
       { path: "payroll", Component: Payroll },
+      { path: "payroll/salaries", Component: EmployeeSalary },
+      { path: "payroll/items", Component: PayrollItems },
       { path: "payroll/processing", Component: PayrollProcessing },
       { path: "payroll/structure", Component: SalaryStructure },
       { path: "payroll/payslip/:id", Component: Payslip },
