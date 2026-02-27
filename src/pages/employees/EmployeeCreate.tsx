@@ -126,7 +126,9 @@ export default function EmployeeCreate() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e?.preventDefault();
+    if (activeTab !== "documents") return;
+
     if (formData.password && formData.password !== formData.confirmPassword) {
       return toast.error("Passwords do not match");
     }
@@ -231,7 +233,15 @@ export default function EmployeeCreate() {
           ))}
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8">
+        <form
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+            }
+          }}
+          onSubmit={(e) => e.preventDefault()}
+          className="p-8"
+        >
           {activeTab === "basic" && (
             <div className="space-y-8">
               {/* Profile Image Section */}
@@ -616,7 +626,8 @@ export default function EmployeeCreate() {
                 </button>
               ) : (
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleSubmit}
                   disabled={isLoading}
                   className="px-8 py-2.5 bg-[#1a5f3f] text-white rounded-lg hover:bg-[#155233] transition-colors font-bold text-sm shadow-sm flex items-center gap-2"
                 >

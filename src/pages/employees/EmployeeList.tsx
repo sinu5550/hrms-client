@@ -23,12 +23,16 @@ interface Employee {
   employeeId: string;
   name: string;
   email: string;
+  profilePhotoUrl?: string;
   department?: { name: string };
   designation?: { name: string };
   joiningDate: string;
   status: "Active" | "Inactive";
   role: string;
 }
+
+const isNonEmptyString = (value: string | undefined): value is string =>
+  Boolean(value);
 
 export default function EmployeeList() {
   const {
@@ -64,6 +68,9 @@ export default function EmployeeList() {
     about: "",
   });
 
+  const getErrorMessage = (error: unknown) =>
+    error instanceof Error ? error.message : "Failed to create employee";
+
   useEffect(() => {
     setEmployees(globalEmployees);
     setLoading(isLoading);
@@ -73,15 +80,17 @@ export default function EmployeeList() {
         "all",
         ...Array.from(
           new Set(
-            globalEmployees.map((e: any) => e.department?.name).filter(Boolean),
+            globalEmployees
+              .map((e: Employee) => e.department?.name)
+              .filter(isNonEmptyString),
           ),
         ),
       ]);
 
       // Calculate next EMP ID
       const lastEmp = globalEmployees
-        .filter((u: any) => u.employeeId?.startsWith("EMP-"))
-        .sort((a: any, b: any) => {
+        .filter((u: Employee) => u.employeeId?.startsWith("EMP-"))
+        .sort((a: Employee, b: Employee) => {
           const numA = parseInt(a.employeeId.replace("EMP-", ""), 10);
           const numB = parseInt(b.employeeId.replace("EMP-", ""), 10);
           return numB - numA;
@@ -131,8 +140,8 @@ export default function EmployeeList() {
         about: "",
       });
       refreshData();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create employee");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
@@ -143,7 +152,8 @@ export default function EmployeeList() {
       emp.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       emp.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       emp.employeeId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      emp.designation?.name.toLowerCase().includes(searchQuery.toLowerCase());
+      (emp.designation?.name &&
+        emp.designation.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchesDepartment =
       filterDepartment === "all" || emp.department?.name === filterDepartment;
@@ -282,11 +292,19 @@ export default function EmployeeList() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-[#1a5f3f] flex items-center justify-center text-white font-bold text-xs shadow-sm">
-                          {employee.name
-                            ?.split(" ")
-                            .map((n) => n[0])
-                            .join("") || "?"}
+                        <div className="w-9 h-9 rounded-full bg-[#1a5f3f] flex items-center justify-center text-white font-bold text-xs shadow-sm overflow-hidden">
+                          {employee.profilePhotoUrl ? (
+                            <img
+                              src={employee.profilePhotoUrl}
+                              alt={employee.name || "Employee"}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            employee.name
+                              ?.split(" ")
+                              .map((n) => n[0])
+                              .join("") || "?"
+                          )}
                         </div>
                         <div>
                           <p className="font-semibold text-gray-900">
