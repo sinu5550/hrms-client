@@ -195,8 +195,10 @@ export default function EmployeeList() {
     if (!pendingRoleChange) return;
     setIsRoleUpdating(true);
     try {
-      await api.put(`/users/${pendingRoleChange.employee.id}`, {
-        role: pendingRoleChange.newRole,
+      const body = new FormData();
+      body.append("role", pendingRoleChange.newRole);
+      await api.put(`/users/${pendingRoleChange.employee.id}`, body, {
+        isFormData: true,
       });
       toast.success(
         `${pendingRoleChange.employee.name} is now ${getRoleLabel(
@@ -384,7 +386,7 @@ export default function EmployeeList() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 w-[210px]">
+                    <td className="px-6 py-4 w-52.5">
                       <Select
                         value={employee.role}
                         onValueChange={(value) => handleRoleSelect(employee, value)}
