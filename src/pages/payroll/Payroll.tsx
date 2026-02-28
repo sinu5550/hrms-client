@@ -121,7 +121,7 @@ export default function Payroll() {
             <h3 className="text-lg font-semibold mb-2">AI Payroll Insights</h3>
             <p className="text-white/90 mb-3">
               Detected 2 potential salary anomalies requiring review. Overtime costs are 18% higher than last month. 
-              Predicted payroll for next month: $2,520,000 (2.9% increase).
+              Predicted payroll for next month: ৳2,520,000 (2.9% increase).
             </p>
             <div className="flex gap-6 text-sm">
               <div>
