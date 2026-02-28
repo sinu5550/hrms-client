@@ -6,6 +6,7 @@ interface DataContextType {
   employees: any[];
   departments: any[];
   designations: any[];
+  policies: any[];
   isLoading: boolean;
   refreshData: () => Promise<void>;
 }
@@ -14,6 +15,7 @@ const DataContext = createContext<DataContextType>({
   employees: [],
   departments: [],
   designations: [],
+  policies: [],
   isLoading: true,
   refreshData: async () => {},
 });
@@ -26,19 +28,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({
   const [employees, setEmployees] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
   const [designations, setDesignations] = useState<any[]>([]);
+  const [policies, setPolicies] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { socket } = useSocket();
 
   const fetchData = async () => {
     try {
-      const [empData, deptData, desigData] = await Promise.all([
+      const [empData, deptData, desigData, policyData] = await Promise.all([
         api.get("/users"),
         api.get("/departments"),
         api.get("/designations"),
+        api.get("/policies"),
       ]);
       setEmployees(empData);
       setDepartments(deptData);
       setDesignations(desigData);
+      setPolicies(policyData);
     } catch (error) {
       console.error("Failed to fetch global data:", error);
     } finally {
@@ -95,6 +100,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({
       setDesignations((prev) => prev.filter((d) => d.id !== id));
     });
 
+    // Policy Listeners
+    socket.on("policyCreated", (newPolicy: any) => {
+      setPolicies((prev) => [...prev, newPolicy]);
+    });
+    socket.on("policyUpdated", (updatedPolicy: any) => {
+      setPolicies((prev) =>
+        prev.map((p) =>
+          p.id === updatedPolicy.id ? { ...p, ...updatedPolicy } : p,
+        ),
+      );
+    });
+    socket.on("policyDeleted", (id: string) => {
+      setPolicies((prev) => prev.filter((p) => p.id !== id));
+    });
+
     // Salary Listeners
     socket.on("salaryCreated", (newSalary: any) => {
       setEmployees((prev) =>
@@ -130,6 +150,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({
       socket.off("designationCreated");
       socket.off("designationUpdated");
       socket.off("designationDeleted");
+      socket.off("policyCreated");
+      socket.off("policyUpdated");
+      socket.off("policyDeleted");
       socket.off("salaryCreated");
     };
   }, [socket]);
@@ -140,6 +163,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({
         employees,
         departments,
         designations,
+        policies,
         isLoading,
         refreshData: fetchData,
       }}
