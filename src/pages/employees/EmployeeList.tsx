@@ -195,10 +195,8 @@ export default function EmployeeList() {
     if (!pendingRoleChange) return;
     setIsRoleUpdating(true);
     try {
-      const body = new FormData();
-      body.append("role", pendingRoleChange.newRole);
-      await api.put(`/users/${pendingRoleChange.employee.id}`, body, {
-        isFormData: true,
+      await api.put(`/users/${pendingRoleChange.employee.id}/role`, {
+        role: pendingRoleChange.newRole,
       });
       toast.success(
         `${pendingRoleChange.employee.name} is now ${getRoleLabel(
