@@ -60,6 +60,11 @@ const getRoleLabel = (value: string) =>
   ROLE_OPTIONS.find((option) => option.value === value)?.label ||
   value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
 
+const isRoleUpdateResponse = (
+  response: unknown,
+): response is { user?: { role?: string } } =>
+  typeof response === "object" && response !== null;
+
 export default function EmployeeList() {
   const {
     employees: globalEmployees,
@@ -195,9 +200,36 @@ export default function EmployeeList() {
     if (!pendingRoleChange) return;
     setIsRoleUpdating(true);
     try {
-      await api.put(`/users/${pendingRoleChange.employee.id}/role`, {
-        role: pendingRoleChange.newRole,
-      });
+      let response: unknown;
+      try {
+        response = await api.put(`/users/${pendingRoleChange.employee.id}/role`, {
+          role: pendingRoleChange.newRole,
+        });
+      } catch (error: unknown) {
+        const message = getErrorMessage(error).toLowerCase();
+        const shouldFallback =
+          message.includes("cannot put") ||
+          message.includes("not found") ||
+          message.includes("404");
+
+        if (!shouldFallback) {
+          throw error;
+        }
+
+        const body = new FormData();
+        body.append("role", pendingRoleChange.newRole);
+        response = await api.put(`/users/${pendingRoleChange.employee.id}`, body, {
+          isFormData: true,
+        });
+      }
+
+      const updatedRole = isRoleUpdateResponse(response)
+        ? response.user?.role
+        : undefined;
+      if (updatedRole !== pendingRoleChange.newRole) {
+        throw new Error("Role update did not persist");
+      }
+
       toast.success(
         `${pendingRoleChange.employee.name} is now ${getRoleLabel(
           pendingRoleChange.newRole,
