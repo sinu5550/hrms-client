@@ -17,6 +17,22 @@ import {
 import { api } from "../../lib/api";
 import { toast } from "sonner";
 import { useData } from "../../contexts/DataContext";
+import { Button } from "../../components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
 
 interface Employee {
   id: string;
@@ -33,6 +49,16 @@ interface Employee {
 
 const isNonEmptyString = (value: string | undefined): value is string =>
   Boolean(value);
+
+const ROLE_OPTIONS = [
+  { value: "EMPLOYEE", label: "Employee" },
+  { value: "SUPERVISOR", label: "Supervisor" },
+  { value: "ADMIN", label: "Admin" },
+];
+
+const getRoleLabel = (value: string) =>
+  ROLE_OPTIONS.find((option) => option.value === value)?.label ||
+  value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
 
 export default function EmployeeList() {
   const {
@@ -147,6 +173,45 @@ export default function EmployeeList() {
     }
   };
 
+  const [pendingRoleChange, setPendingRoleChange] = useState<{
+    employee: Employee;
+    newRole: string;
+  } | null>(null);
+  const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
+  const [isRoleUpdating, setIsRoleUpdating] = useState(false);
+
+  const closeRoleDialog = () => {
+    setIsRoleDialogOpen(false);
+    setPendingRoleChange(null);
+  };
+
+  const handleRoleSelect = (employee: Employee, newRole: string) => {
+    if (newRole === employee.role) return;
+    setPendingRoleChange({ employee, newRole });
+    setIsRoleDialogOpen(true);
+  };
+
+  const applyRoleChange = async () => {
+    if (!pendingRoleChange) return;
+    setIsRoleUpdating(true);
+    try {
+      await api.put(`/users/${pendingRoleChange.employee.id}`, {
+        role: pendingRoleChange.newRole,
+      });
+      toast.success(
+        `${pendingRoleChange.employee.name} is now ${getRoleLabel(
+          pendingRoleChange.newRole,
+        )}`,
+      );
+      await refreshData();
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setIsRoleUpdating(false);
+      closeRoleDialog();
+    }
+  };
+
   const filteredEmployees = employees.filter((emp) => {
     const matchesSearch =
       emp.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -246,6 +311,9 @@ export default function EmployeeList() {
                   Employee Name
                 </th>
                 <th className="px-6 py-4 text-sm font-bold text-gray-900">
+                  Role
+                </th>
+                <th className="px-6 py-4 text-sm font-bold text-gray-900">
                   Department
                 </th>
                 <th className="px-6 py-4 text-sm font-bold text-gray-900">
@@ -266,7 +334,7 @@ export default function EmployeeList() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     Loading employees...
@@ -275,7 +343,7 @@ export default function EmployeeList() {
               ) : filteredEmployees.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     No employees found.
@@ -315,6 +383,23 @@ export default function EmployeeList() {
                           </p>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 w-[210px]">
+                      <Select
+                        value={employee.role}
+                        onValueChange={(value) => handleRoleSelect(employee, value)}
+                      >
+                        <SelectTrigger size="sm">
+                          <SelectValue placeholder={getRoleLabel(employee.role)} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ROLE_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </td>
                     <td className="px-6 py-4 text-gray-700 font-medium">
                       {employee.department?.name || "-"}
@@ -612,6 +697,46 @@ export default function EmployeeList() {
           </div>
         </div>
       )}
+      <Dialog
+        open={isRoleDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeRoleDialog();
+          } else {
+            setIsRoleDialogOpen(true);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Role Change</DialogTitle>
+            <DialogDescription>
+              {pendingRoleChange
+                ? `Are you sure you want to change ${pendingRoleChange.employee.name}'s role to ${getRoleLabel(
+                    pendingRoleChange.newRole,
+                  )}?`
+                : "Select a role to update the employee's permissions."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-row-reverse gap-2">
+            <Button
+              onClick={applyRoleChange}
+              disabled={isRoleUpdating}
+              className="w-full sm:w-auto"
+            >
+              {isRoleUpdating ? "Updating..." : "Confirm Role"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={closeRoleDialog}
+              disabled={isRoleUpdating}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
