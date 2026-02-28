@@ -131,7 +131,7 @@ export default function SalaryStructure() {
                         <div>
                           <p className="text-gray-500">Value</p>
                           <p className="font-medium text-gray-800">
-                            {component.calculation === 'Fixed' ? `$${component.value}` : `${component.value}%`}
+                            {component.calculation === 'Fixed' ? `৳${component.value}` : `${component.value}%`}
                           </p>
                         </div>
                       </div>
@@ -175,7 +175,7 @@ export default function SalaryStructure() {
                         <div>
                           <p className="text-gray-500">Value</p>
                           <p className="font-medium text-gray-800">
-                            {component.calculation === 'Fixed' ? `$${component.value}` : `${component.value}%`}
+                            {component.calculation === 'Fixed' ? `৳${component.value}` : `${component.value}%`}
                           </p>
                         </div>
                       </div>
