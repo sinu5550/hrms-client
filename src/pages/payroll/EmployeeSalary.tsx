@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import {
   Search,
@@ -15,50 +15,174 @@ import { api } from "../../lib/api";
 import { toast } from "sonner";
 import { useData } from "../../contexts/DataContext";
 
+type SalaryValue = number | "";
+type SalaryMap = Record<string, SalaryValue>;
+
+interface PayrollItem {
+  id: string;
+  name: string;
+  category: string;
+  amountType: string;
+  defaultValue: number;
+}
+
+interface SalaryRecord {
+  earnings?: Record<string, number>;
+  deductions?: Record<string, number>;
+  netSalary?: number;
+}
+
+interface Employee {
+  id: string;
+  name: string;
+  email: string;
+  employeeId: string;
+  role: string;
+  profilePhotoUrl?: string;
+  designation?: { name: string };
+  salaries?: SalaryRecord[];
+}
+
+const BASIC_FIELD = "Basic";
+
+const isDeductionItem = (category: string) => {
+  const c = category.toLowerCase();
+  return c.includes("deduction") || c.includes("statutory");
+};
+
+const toLegacyFieldKey = (name: string) =>
+  name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+?/g, "");
+
+const readSavedValue = (
+  saved: Record<string, number> | undefined,
+  fieldName: string,
+) => {
+  if (!saved) return undefined;
+  if (Object.prototype.hasOwnProperty.call(saved, fieldName)) {
+    return Number(saved[fieldName]);
+  }
+  const legacyKey = toLegacyFieldKey(fieldName);
+  if (Object.prototype.hasOwnProperty.call(saved, legacyKey)) {
+    return Number(saved[legacyKey]);
+  }
+  return undefined;
+};
+
+const createDefaultMap = (items: PayrollItem[], includeBasic = false) =>
+  items.reduce<SalaryMap>(
+    (acc, item) => {
+      acc[item.name] = item.defaultValue > 0 ? item.defaultValue : "";
+      return acc;
+    },
+    includeBasic ? { [BASIC_FIELD]: "" } : {},
+  );
+
+const normalizeMap = (values: SalaryMap) =>
+  Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [key, Number(value || 0)]),
+  );
+
+const buildValuesFromSalary = (
+  items: PayrollItem[],
+  saved: Record<string, number> | undefined,
+  includeBasic = false,
+) =>
+  items.reduce<SalaryMap>(
+    (acc, item) => {
+      const savedValue = readSavedValue(saved, item.name);
+      if (savedValue !== undefined) {
+        acc[item.name] = savedValue;
+        return acc;
+      }
+      acc[item.name] = item.defaultValue > 0 ? item.defaultValue : "";
+      return acc;
+    },
+    includeBasic
+      ? { [BASIC_FIELD]: readSavedValue(saved, BASIC_FIELD) ?? "" }
+      : {},
+  );
+
 export default function EmployeeSalary() {
   const { employees: allEmployees, isLoading, refreshData } = useData();
-  const [employees, setEmployees] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string>("");
+  const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
+  const [isItemsLoading, setIsItemsLoading] = useState(false);
+  const [earnings, setEarnings] = useState<SalaryMap>({});
+  const [deductions, setDeductions] = useState<SalaryMap>({});
+
+  const additionItems = useMemo(
+    () =>
+      payrollItems.filter(
+        (item) =>
+          !isDeductionItem(item.category) &&
+          item.name.toLowerCase() !== BASIC_FIELD.toLowerCase(),
+      ),
+    [payrollItems],
+  );
+
+  const deductionItems = useMemo(
+    () => payrollItems.filter((item) => isDeductionItem(item.category)),
+    [payrollItems],
+  );
 
   useEffect(() => {
-    setEmployees(allEmployees.filter((u: any) => u.role === "EMPLOYEE"));
+    setEmployees(allEmployees);
   }, [allEmployees]);
 
-  const [earnings, setEarnings] = useState({
-    basic: 0,
-    da: 0,
-    hra: 0,
-    conveyance: 0,
-    allowance: 0,
-    medical: 0,
-    others: 0,
-  });
+  useEffect(() => {
+    const fetchPayrollItems = async () => {
+      try {
+        setIsItemsLoading(true);
+        const data = await api.get("/payroll/items");
+        setPayrollItems(data || []);
+      } catch {
+        toast.error("Failed to fetch payroll items");
+      } finally {
+        setIsItemsLoading(false);
+      }
+    };
+    fetchPayrollItems();
+  }, []);
 
-  const [deductions, setDeductions] = useState({
-    tds: 0,
-    esi: 0,
-    pf: 0,
-    leave: 0,
-    profTax: 0,
-    labourWelfare: 0,
-    others: 0,
-  });
+  useEffect(() => {
+    if (!selectedUser) {
+      setEarnings(createDefaultMap(additionItems, true));
+      setDeductions(createDefaultMap(deductionItems));
+    }
+  }, [additionItems, deductionItems, selectedUser]);
 
-  const totalEarnings = useMemo(() => {
-    return Object.values(earnings).reduce((acc, curr) => acc + Number(curr), 0);
-  }, [earnings]);
+  const totalEarnings = useMemo(
+    () =>
+      Object.values(earnings).reduce<number>(
+        (acc, curr) => acc + Number(curr || 0),
+        0,
+      ),
+    [earnings],
+  );
 
-  const totalDeductions = useMemo(() => {
-    return Object.values(deductions).reduce(
-      (acc, curr) => acc + Number(curr),
-      0,
-    );
-  }, [deductions]);
+  const totalDeductions = useMemo(
+    () =>
+      Object.values(deductions).reduce<number>(
+        (acc, curr) => acc + Number(curr || 0),
+        0,
+      ),
+    [deductions],
+  );
 
-  const netSalary = totalEarnings - totalDeductions;
+  const netSalary: number = totalEarnings - totalDeductions;
+
+  const resetForm = () => {
+    setEarnings(createDefaultMap(additionItems, true));
+    setDeductions(createDefaultMap(deductionItems));
+    setSelectedUser("");
+  };
 
   const handleAddSalary = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,15 +194,15 @@ export default function EmployeeSalary() {
         amount: totalEarnings,
         month: new Date().toLocaleString("default", { month: "long" }),
         year: new Date().getFullYear().toString(),
-        earnings,
-        deductions,
+        earnings: normalizeMap(earnings),
+        deductions: normalizeMap(deductions),
         netSalary,
       });
       toast.success("Salary added successfully");
       setIsModalOpen(false);
       resetForm();
       refreshData();
-    } catch (error) {
+    } catch {
       toast.error("Failed to add salary");
     }
   };
@@ -94,47 +218,34 @@ export default function EmployeeSalary() {
     const latestSalary = emp?.salaries?.[0];
 
     if (latestSalary) {
-      setEarnings(latestSalary.earnings || earnings);
-      setDeductions(latestSalary.deductions || deductions);
+      setEarnings(
+        buildValuesFromSalary(additionItems, latestSalary.earnings, true),
+      );
+      setDeductions(
+        buildValuesFromSalary(deductionItems, latestSalary.deductions),
+      );
     } else {
-      resetForm();
-      // Keep the selected user after reset
+      setEarnings(createDefaultMap(additionItems, true));
+      setDeductions(createDefaultMap(deductionItems));
       setSelectedUser(userId);
     }
   };
 
-  const handleEdit = (emp: any) => {
+  const handleEdit = (emp: Employee) => {
     setSelectedUser(emp.id);
     const latestSalary = emp.salaries?.[0];
     if (latestSalary) {
-      setEarnings(latestSalary.earnings || earnings);
-      setDeductions(latestSalary.deductions || deductions);
+      setEarnings(
+        buildValuesFromSalary(additionItems, latestSalary.earnings, true),
+      );
+      setDeductions(
+        buildValuesFromSalary(deductionItems, latestSalary.deductions),
+      );
     } else {
-      resetForm();
+      setEarnings(createDefaultMap(additionItems, true));
+      setDeductions(createDefaultMap(deductionItems));
     }
     setIsModalOpen(true);
-  };
-
-  const resetForm = () => {
-    setEarnings({
-      basic: 0,
-      da: 0,
-      hra: 0,
-      conveyance: 0,
-      allowance: 0,
-      medical: 0,
-      others: 0,
-    });
-    setDeductions({
-      tds: 0,
-      esi: 0,
-      pf: 0,
-      leave: 0,
-      profTax: 0,
-      labourWelfare: 0,
-      others: 0,
-    });
-    setSelectedUser("");
   };
 
   const filteredEmployees = employees.filter((emp) => {
@@ -148,7 +259,6 @@ export default function EmployeeSalary() {
 
   return (
     <div className="p-8">
-      {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold text-gray-800">
@@ -187,7 +297,6 @@ export default function EmployeeSalary() {
           </h2>
         </div>
 
-        {/* Filters and Search */}
         <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row gap-4 items-center justify-between bg-white text-sm">
           <div className="flex items-center gap-4 w-full sm:w-auto">
             <div className="flex items-center gap-2">
@@ -223,7 +332,6 @@ export default function EmployeeSalary() {
           </div>
         </div>
 
-        {/* Table Content */}
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200 text-left">
@@ -311,9 +419,18 @@ export default function EmployeeSalary() {
                         {emp.designation?.name || "-"}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900 font-bold">
-                        {latestSalary
-                          ? `$${latestSalary.netSalary.toLocaleString()}`
-                          : "-"}
+                        {latestSalary?.netSalary ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-md font-black ">
+                              ৳
+                            </span>
+                            <span>
+                              {Number(latestSalary.netSalary).toLocaleString()}
+                            </span>
+                          </div>
+                        ) : (
+                          "-"
+                        )}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <Link
@@ -344,7 +461,6 @@ export default function EmployeeSalary() {
           </table>
         </div>
 
-        {/* Pagination Footer */}
         <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-white">
           <p className="text-sm text-gray-600 font-medium">
             Showing 1 - {filteredEmployees.length} of {employees.length} entries
@@ -363,7 +479,6 @@ export default function EmployeeSalary() {
         </div>
       </div>
 
-      {/* Add Salary Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl animate-in fade-in zoom-in duration-200 mt-20 mb-20">
@@ -403,135 +518,94 @@ export default function EmployeeSalary() {
                   <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
                     Net Salary
                   </label>
-                  <div className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-800 text-sm">
-                    ${netSalary.toLocaleString()}
+                  <div className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-800 text-sm flex items-center gap-1">
+                    <span className="text-md font-black ">
+                      ৳
+                    </span>
+                    <span>{netSalary.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Earnings Section */}
               <div className="mb-8">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-sm font-bold text-[#1a5f3f] flex items-center gap-2">
                     <Plus className="w-4 h-4" /> Earnings
                   </h4>
-                  <button
-                    type="button"
-                    className="text-[11px] font-bold text-[#1a5f3f] hover:underline uppercase"
-                  >
-                    + Add New
-                  </button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <SalaryInput
-                    label="Basic"
-                    value={earnings.basic}
-                    onChange={(val) => setEarnings({ ...earnings, basic: val })}
-                  />
-                  <SalaryInput
-                    label="DA(40%)"
-                    value={earnings.da}
-                    onChange={(val) => setEarnings({ ...earnings, da: val })}
-                  />
-                  <SalaryInput
-                    label="HRA(15%)"
-                    value={earnings.hra}
-                    onChange={(val) => setEarnings({ ...earnings, hra: val })}
-                  />
-                  <SalaryInput
-                    label="Conveyance"
-                    value={earnings.conveyance}
-                    onChange={(val) =>
-                      setEarnings({ ...earnings, conveyance: val })
-                    }
-                  />
-                  <SalaryInput
-                    label="Allowance"
-                    value={earnings.allowance}
-                    onChange={(val) =>
-                      setEarnings({ ...earnings, allowance: val })
-                    }
-                  />
-                  <SalaryInput
-                    label="Medical Allowance"
-                    value={earnings.medical}
-                    onChange={(val) =>
-                      setEarnings({ ...earnings, medical: val })
-                    }
-                  />
-                  <SalaryInput
-                    label="Others"
-                    value={earnings.others}
-                    onChange={(val) =>
-                      setEarnings({ ...earnings, others: val })
-                    }
-                  />
+                  {isItemsLoading ? (
+                    <p className="text-sm text-gray-500 col-span-full">
+                      Loading payroll items...
+                    </p>
+                  ) : additionItems.length === 0 ? (
+                    <SalaryInput
+                      label={BASIC_FIELD}
+                      value={earnings[BASIC_FIELD] ?? ""}
+                      onChange={(val) =>
+                        setEarnings((prev) => ({ ...prev, [BASIC_FIELD]: val }))
+                      }
+                    />
+                  ) : (
+                    <>
+                      <SalaryInput
+                        label={BASIC_FIELD}
+                        value={earnings[BASIC_FIELD] ?? ""}
+                        onChange={(val) =>
+                          setEarnings((prev) => ({
+                            ...prev,
+                            [BASIC_FIELD]: val,
+                          }))
+                        }
+                      />
+                      {additionItems.map((item) => (
+                        <SalaryInput
+                          key={item.id}
+                          label={item.name}
+                          value={earnings[item.name] ?? ""}
+                          onChange={(val) =>
+                            setEarnings((prev) => ({
+                              ...prev,
+                              [item.name]: val,
+                            }))
+                          }
+                        />
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
 
-              {/* Deductions Section */}
               <div className="mb-8">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-sm font-bold text-red-600 flex items-center gap-2">
                     <X className="w-4 h-4" /> Deductions
                   </h4>
-                  <button
-                    type="button"
-                    className="text-[11px] font-bold text-red-600 hover:underline uppercase"
-                  >
-                    + Add New
-                  </button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <SalaryInput
-                    label="TDS"
-                    value={deductions.tds}
-                    onChange={(val) =>
-                      setDeductions({ ...deductions, tds: val })
-                    }
-                  />
-                  <SalaryInput
-                    label="ESI"
-                    value={deductions.esi}
-                    onChange={(val) =>
-                      setDeductions({ ...deductions, esi: val })
-                    }
-                  />
-                  <SalaryInput
-                    label="PF"
-                    value={deductions.pf}
-                    onChange={(val) =>
-                      setDeductions({ ...deductions, pf: val })
-                    }
-                  />
-                  <SalaryInput
-                    label="Leave"
-                    value={deductions.leave}
-                    onChange={(val) =>
-                      setDeductions({ ...deductions, leave: val })
-                    }
-                  />
-                  <SalaryInput
-                    label="Prof.Tax"
-                    value={deductions.profTax}
-                    onChange={(val) =>
-                      setDeductions({ ...deductions, profTax: val })
-                    }
-                  />
-                  <SalaryInput
-                    label="Labour Welfare"
-                    value={deductions.labourWelfare}
-                    onChange={(val) =>
-                      setDeductions({ ...deductions, labourWelfare: val })
-                    }
-                  />
-                  <SalaryInput
-                    label="Others"
-                    value={deductions.others}
-                    onChange={(val) =>
-                      setDeductions({ ...deductions, others: val })
-                    }
-                  />
+                  {isItemsLoading ? (
+                    <p className="text-sm text-gray-500 col-span-full">
+                      Loading payroll items...
+                    </p>
+                  ) : deductionItems.length === 0 ? (
+                    <p className="text-sm text-gray-500 col-span-full">
+                      No deduction payroll items found.
+                    </p>
+                  ) : (
+                    deductionItems.map((item) => (
+                      <SalaryInput
+                        key={item.id}
+                        label={item.name}
+                        value={deductions[item.name] ?? ""}
+                        onChange={(val) =>
+                          setDeductions((prev) => ({
+                            ...prev,
+                            [item.name]: val,
+                          }))
+                        }
+                      />
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -564,8 +638,8 @@ function SalaryInput({
   onChange,
 }: {
   label: string;
-  value: number;
-  onChange: (val: number) => void;
+  value: SalaryValue;
+  onChange: (val: SalaryValue) => void;
 }) {
   return (
     <div>
@@ -574,8 +648,10 @@ function SalaryInput({
       </label>
       <input
         type="number"
-        value={value || ""}
-        onChange={(e) => onChange(Number(e.target.value))}
+        value={value === "" ? "" : value}
+        onChange={(e) =>
+          onChange(e.target.value === "" ? "" : Number(e.target.value))
+        }
         className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5f3f] focus:bg-white transition-all text-sm font-semibold"
         placeholder="0.00"
       />
