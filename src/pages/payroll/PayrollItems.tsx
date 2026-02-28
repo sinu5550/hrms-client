@@ -94,7 +94,7 @@ export default function PayrollItems() {
       setEditingItemId(item.id);
       setFormData({
         name: item.name,
-        amountType: item.amountType || "Fixed",
+        amountType: item.amountType === "Hourly" ? "Hourly" : "Fixed",
         defaultValue: String(item.defaultValue ?? ""),
       });
     } else {
@@ -297,9 +297,12 @@ export default function PayrollItems() {
                       {item.category}
                     </td>
                     <td className="px-6 py-4 text-sm text-[#1a5f3f] font-bold">
-                      {item.amountType === "Percentage"
-                        ? `${item.defaultValue}%`
-                        : `$${item.defaultValue}`}
+                      <div className="flex items-center gap-1">
+                        <span className="text-md font-black ">
+                          ৳
+                        </span>
+                        <span>{item.defaultValue}</span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-3 font-semibold">
@@ -389,12 +392,14 @@ export default function PayrollItems() {
                   >
                     <option value="Fixed">Fixed</option>
                     <option value="Hourly">Hourly</option>
-                    <option value="Percentage">Percentage</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Default / Unit Amount
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                    <span>Default / Unit Amount</span>
+                    <span className="text-md font-black ">
+                      ৳
+                    </span>
                   </label>
                   <input
                     type="number"
