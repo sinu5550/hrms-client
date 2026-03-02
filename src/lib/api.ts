@@ -1,6 +1,11 @@
 // api.ts
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "https://hrms-server-siyan.vercel.app/api";
+const RAW_API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
+const API_BASE_URL = RAW_API_BASE_URL.replace(/\/+$/, "");
+
+const buildUrl = (endpoint: string) => {
+  const safeEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  return `${API_BASE_URL}${safeEndpoint}`;
+};
 
 export const api = {
   async post(
@@ -13,7 +18,7 @@ export const api = {
       headers["Content-Type"] = "application/json";
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(buildUrl(endpoint), {
       method: "POST",
       headers,
       body: options.isFormData ? data : JSON.stringify(data),
@@ -28,7 +33,7 @@ export const api = {
   },
 
   async get(endpoint: string) {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(buildUrl(endpoint), {
       method: "GET",
     });
     if (!response.ok) {
@@ -48,7 +53,7 @@ export const api = {
       headers["Content-Type"] = "application/json";
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(buildUrl(endpoint), {
       method: "PUT",
       headers,
       body: options.isFormData ? data : JSON.stringify(data),
@@ -61,7 +66,7 @@ export const api = {
   },
 
   async delete(endpoint: string) {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(buildUrl(endpoint), {
       method: "DELETE",
     });
     if (!response.ok) {
