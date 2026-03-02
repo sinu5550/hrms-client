@@ -520,7 +520,7 @@ export default function EmployeeDetail() {
                             className="hover:bg-gray-50 transition-colors"
                           >
                             <td className="px-6 py-4 text-sm font-semibold text-gray-700">
-                              {sal.month} {sal.year}
+                              {sal.salaryMonthLabel || `${sal.month || ""}${sal.month && sal.year ? ", " : ""}${sal.year || ""}`}
                             </td>
                             <td className="px-6 py-4 text-sm font-bold text-[#1a5f3f]">
                               ${sal.netSalary.toLocaleString()}
