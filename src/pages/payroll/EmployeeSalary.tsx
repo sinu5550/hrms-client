@@ -10,6 +10,7 @@ import {
   Home,
   ChevronLeft,
   X,
+  SlidersHorizontal,
 } from "lucide-react";
 import { api } from "../../lib/api";
 import { toast } from "sonner";
@@ -22,14 +23,28 @@ interface PayrollItem {
   id: string;
   name: string;
   category: string;
-  amountType: string;
-  defaultValue: number;
 }
 
 interface SalaryRecord {
+  id: string;
+  userId: string;
+  amount: number;
+  netSalary: number;
+  salaryMonth: number;
+  salaryYear: number;
+  salaryMonthLabel?: string;
+  month?: string;
+  year?: string;
   earnings?: Record<string, number>;
   deductions?: Record<string, number>;
-  netSalary?: number;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    employeeId: string;
+    profilePhotoUrl?: string;
+    designation?: { name: string };
+  };
 }
 
 interface Employee {
@@ -37,13 +52,25 @@ interface Employee {
   name: string;
   email: string;
   employeeId: string;
-  role: string;
-  profilePhotoUrl?: string;
-  designation?: { name: string };
-  salaries?: SalaryRecord[];
 }
 
 const BASIC_FIELD = "Basic";
+const DEFAULT_YEAR = new Date().getFullYear();
+const DEFAULT_MONTH = new Date().getMonth() + 1;
+const MONTH_OPTIONS = [
+  { value: 1, label: "January" },
+  { value: 2, label: "February" },
+  { value: 3, label: "March" },
+  { value: 4, label: "April" },
+  { value: 5, label: "May" },
+  { value: 6, label: "June" },
+  { value: 7, label: "July" },
+  { value: 8, label: "August" },
+  { value: 9, label: "September" },
+  { value: 10, label: "October" },
+  { value: 11, label: "November" },
+  { value: 12, label: "December" },
+];
 
 const isDeductionItem = (category: string) => {
   const c = category.toLowerCase();
@@ -54,7 +81,7 @@ const toLegacyFieldKey = (name: string) =>
   name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+?/g, "");
+    .replace(/^_+|_+?$/g, "");
 
 const readSavedValue = (
   saved: Record<string, number> | undefined,
@@ -71,12 +98,9 @@ const readSavedValue = (
   return undefined;
 };
 
-const createDefaultMap = (items: PayrollItem[], includeBasic = false) =>
+const createEmptyMap = (items: PayrollItem[], includeBasic = false) =>
   items.reduce<SalaryMap>(
-    (acc, item) => {
-      acc[item.name] = item.defaultValue > 0 ? item.defaultValue : "";
-      return acc;
-    },
+    (acc, item) => ({ ...acc, [item.name]: "" }),
     includeBasic ? { [BASIC_FIELD]: "" } : {},
   );
 
@@ -91,27 +115,72 @@ const buildValuesFromSalary = (
   includeBasic = false,
 ) =>
   items.reduce<SalaryMap>(
-    (acc, item) => {
-      const savedValue = readSavedValue(saved, item.name);
-      if (savedValue !== undefined) {
-        acc[item.name] = savedValue;
-        return acc;
-      }
-      acc[item.name] = item.defaultValue > 0 ? item.defaultValue : "";
-      return acc;
-    },
+    (acc, item) => ({
+      ...acc,
+      [item.name]: readSavedValue(saved, item.name) ?? "",
+    }),
     includeBasic
       ? { [BASIC_FIELD]: readSavedValue(saved, BASIC_FIELD) ?? "" }
       : {},
   );
 
+const buildMonthLabel = (row: SalaryRecord) => {
+  if (row.salaryMonthLabel) return row.salaryMonthLabel;
+  if (row.salaryMonth && row.salaryYear) {
+    const label =
+      MONTH_OPTIONS.find((m) => m.value === row.salaryMonth)?.label || "";
+    return label ? `${label}, ${row.salaryYear}` : "-";
+  }
+  if (row.month && row.year) return `${row.month}, ${row.year}`;
+  return "-";
+};
+
+const getMonthNumberFromRow = (row: SalaryRecord) => {
+  if (row.salaryMonth) return Number(row.salaryMonth);
+  if (row.month) {
+    const idx = MONTH_OPTIONS.findIndex(
+      (m) => m.label.toLowerCase() === String(row.month).toLowerCase(),
+    );
+    if (idx >= 0) return MONTH_OPTIONS[idx].value;
+  }
+  return DEFAULT_MONTH;
+};
+
+const getYearNumberFromRow = (row: SalaryRecord) => {
+  if (row.salaryYear) return Number(row.salaryYear);
+  const parsed = Number(row.year);
+  if (Number.isInteger(parsed) && parsed > 0) return parsed;
+  return DEFAULT_YEAR;
+};
+
 export default function EmployeeSalary() {
   const { employees: allEmployees, isLoading, refreshData } = useData();
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const employees = (allEmployees || []) as Employee[];
+
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [rows, setRows] = useState<SalaryRecord[]>([]);
+  const [isRowsLoading, setIsRowsLoading] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
+
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [filterMonth, setFilterMonth] = useState("");
+  const [filterYear, setFilterYear] = useState("");
+  const [minSalary, setMinSalary] = useState("");
+  const [maxSalary, setMaxSalary] = useState("");
+  const [draftFilterMonth, setDraftFilterMonth] = useState("");
+  const [draftFilterYear, setDraftFilterYear] = useState("");
+  const [draftMinSalary, setDraftMinSalary] = useState("");
+  const [draftMaxSalary, setDraftMaxSalary] = useState("");
+
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<string>("");
+  const [selectedUser, setSelectedUser] = useState("");
+  const [selectedSalaryMonth, setSelectedSalaryMonth] = useState(
+    String(DEFAULT_MONTH),
+  );
+  const [selectedSalaryYear, setSelectedSalaryYear] = useState(
+    String(DEFAULT_YEAR),
+  );
+
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
   const [isItemsLoading, setIsItemsLoading] = useState(false);
   const [earnings, setEarnings] = useState<SalaryMap>({});
@@ -132,9 +201,112 @@ export default function EmployeeSalary() {
     [payrollItems],
   );
 
-  useEffect(() => {
-    setEmployees(allEmployees);
-  }, [allEmployees]);
+  const totalEarnings = useMemo(
+    () =>
+      Object.values(earnings).reduce<number>(
+        (acc, curr) => acc + Number(curr || 0),
+        0,
+      ),
+    [earnings],
+  );
+  const totalDeductions = useMemo(
+    () =>
+      Object.values(deductions).reduce<number>(
+        (acc, curr) => acc + Number(curr || 0),
+        0,
+      ),
+    [deductions],
+  );
+  const netSalary = totalEarnings - totalDeductions;
+
+  const yearOptions = useMemo(() => {
+    const years = new Set<number>();
+    for (let y = DEFAULT_YEAR - 2; y <= DEFAULT_YEAR + 5; y += 1) years.add(y);
+    rows.forEach((row) => years.add(Number(row.salaryYear)));
+    return Array.from(years).sort((a, b) => b - a);
+  }, [rows]);
+
+  const resetForm = () => {
+    setSelectedUser("");
+    setSelectedSalaryMonth(String(DEFAULT_MONTH));
+    setSelectedSalaryYear(String(DEFAULT_YEAR));
+    setEarnings(createEmptyMap(additionItems, true));
+    setDeductions(createEmptyMap(deductionItems));
+  };
+
+  const openFilterModal = () => {
+    setDraftFilterMonth(filterMonth);
+    setDraftFilterYear(filterYear);
+    setDraftMinSalary(minSalary);
+    setDraftMaxSalary(maxSalary);
+    setIsFilterModalOpen(true);
+  };
+
+  const applyFilters = () => {
+    setFilterMonth(draftFilterMonth);
+    setFilterYear(draftFilterYear);
+    setMinSalary(draftMinSalary);
+    setMaxSalary(draftMaxSalary);
+    setIsFilterModalOpen(false);
+  };
+
+  const clearFilters = () => {
+    setDraftFilterMonth("");
+    setDraftFilterYear("");
+    setDraftMinSalary("");
+    setDraftMaxSalary("");
+    setFilterMonth("");
+    setFilterYear("");
+    setMinSalary("");
+    setMaxSalary("");
+    setIsFilterModalOpen(false);
+  };
+
+  const openForExistingSalary = (row: SalaryRecord) => {
+    setSelectedUser(row.userId);
+    setSelectedSalaryMonth(String(getMonthNumberFromRow(row)));
+    setSelectedSalaryYear(String(getYearNumberFromRow(row)));
+    setIsModalOpen(true);
+  };
+
+  const openForNewSalary = () => {
+    resetForm();
+    setIsModalOpen(true);
+  };
+
+  const handleAddSalary = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return toast.error("Please select an employee");
+    const salaryMonth = Number(selectedSalaryMonth);
+    const salaryYear = Number(selectedSalaryYear);
+    if (!Number.isInteger(salaryMonth) || salaryMonth < 1 || salaryMonth > 12) {
+      return toast.error("Please select a valid salary month");
+    }
+    if (!Number.isInteger(salaryYear) || salaryYear < 1900) {
+      return toast.error("Please select a valid salary year");
+    }
+    if (netSalary <= 0) {
+      return toast.error("Net salary must be a positive number");
+    }
+    try {
+      await api.post("/payroll/salaries", {
+        userId: selectedUser,
+        amount: totalEarnings,
+        salaryMonth,
+        salaryYear,
+        earnings: normalizeMap(earnings),
+        deductions: normalizeMap(deductions),
+        netSalary,
+      });
+      toast.success("Salary saved successfully");
+      setIsModalOpen(false);
+      resetForm();
+      refreshData();
+      setReloadToken((prev) => prev + 1);
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to save salary");
+    }
+  };
 
   useEffect(() => {
     const fetchPayrollItems = async () => {
@@ -152,110 +324,77 @@ export default function EmployeeSalary() {
   }, []);
 
   useEffect(() => {
-    if (!selectedUser) {
-      setEarnings(createDefaultMap(additionItems, true));
-      setDeductions(createDefaultMap(deductionItems));
-    }
-  }, [additionItems, deductionItems, selectedUser]);
+    const timeoutId = setTimeout(async () => {
+      try {
+        setIsRowsLoading(true);
+        const params = new URLSearchParams();
+        if (searchTerm.trim()) params.set("search", searchTerm.trim());
+        if (filterMonth) params.set("salary_month", filterMonth);
+        if (filterYear) params.set("salary_year", filterYear);
+        if (minSalary.trim()) params.set("min_salary", minSalary.trim());
+        if (maxSalary.trim()) params.set("max_salary", maxSalary.trim());
+        const query = params.toString();
+        const endpoint = query ? `/payroll/salaries?${query}` : "/payroll/salaries";
+        const data = await api.get(endpoint);
+        setRows(data || []);
+      } catch {
+        toast.error("Failed to fetch salaries");
+      } finally {
+        setIsRowsLoading(false);
+      }
+    }, 250);
 
-  const totalEarnings = useMemo(
-    () =>
-      Object.values(earnings).reduce<number>(
-        (acc, curr) => acc + Number(curr || 0),
-        0,
-      ),
-    [earnings],
-  );
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, filterMonth, filterYear, minSalary, maxSalary, reloadToken]);
 
-  const totalDeductions = useMemo(
-    () =>
-      Object.values(deductions).reduce<number>(
-        (acc, curr) => acc + Number(curr || 0),
-        0,
-      ),
-    [deductions],
-  );
+  useEffect(() => {
+    let isCancelled = false;
 
-  const netSalary: number = totalEarnings - totalDeductions;
+    const preloadSalary = async () => {
+      if (!isModalOpen || isItemsLoading) return;
+      if (!selectedUser || !selectedSalaryMonth || !selectedSalaryYear) return;
+      const salaryMonth = Number(selectedSalaryMonth);
+      const salaryYear = Number(selectedSalaryYear);
+      if (!Number.isInteger(salaryMonth) || !Number.isInteger(salaryYear)) return;
 
-  const resetForm = () => {
-    setEarnings(createDefaultMap(additionItems, true));
-    setDeductions(createDefaultMap(deductionItems));
-    setSelectedUser("");
-  };
+      try {
+        const data = (await api.get(
+          `/payroll/salaries?user_id=${encodeURIComponent(selectedUser)}&salary_month=${salaryMonth}&salary_year=${salaryYear}`,
+        )) as SalaryRecord[];
+        if (isCancelled) return;
+        const row =
+          data?.find(
+            (item) =>
+              getMonthNumberFromRow(item) === salaryMonth &&
+              getYearNumberFromRow(item) === salaryYear,
+          ) || data?.[0];
+        if (row) {
+          setEarnings(buildValuesFromSalary(additionItems, row.earnings, true));
+          setDeductions(buildValuesFromSalary(deductionItems, row.deductions));
+        } else {
+          setEarnings(createEmptyMap(additionItems, true));
+          setDeductions(createEmptyMap(deductionItems));
+        }
+      } catch {
+        if (isCancelled) return;
+        toast.error("Failed to load selected salary data");
+      }
+    };
 
-  const handleAddSalary = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedUser) return toast.error("Please select an employee");
+    preloadSalary();
 
-    try {
-      await api.post("/payroll/salaries", {
-        userId: selectedUser,
-        amount: totalEarnings,
-        month: new Date().toLocaleString("default", { month: "long" }),
-        year: new Date().getFullYear().toString(),
-        earnings: normalizeMap(earnings),
-        deductions: normalizeMap(deductions),
-        netSalary,
-      });
-      toast.success("Salary added successfully");
-      setIsModalOpen(false);
-      resetForm();
-      refreshData();
-    } catch {
-      toast.error("Failed to add salary");
-    }
-  };
-
-  const handleUserChange = (userId: string) => {
-    setSelectedUser(userId);
-    if (!userId) {
-      resetForm();
-      return;
-    }
-
-    const emp = employees.find((e) => e.id === userId);
-    const latestSalary = emp?.salaries?.[0];
-
-    if (latestSalary) {
-      setEarnings(
-        buildValuesFromSalary(additionItems, latestSalary.earnings, true),
-      );
-      setDeductions(
-        buildValuesFromSalary(deductionItems, latestSalary.deductions),
-      );
-    } else {
-      setEarnings(createDefaultMap(additionItems, true));
-      setDeductions(createDefaultMap(deductionItems));
-      setSelectedUser(userId);
-    }
-  };
-
-  const handleEdit = (emp: Employee) => {
-    setSelectedUser(emp.id);
-    const latestSalary = emp.salaries?.[0];
-    if (latestSalary) {
-      setEarnings(
-        buildValuesFromSalary(additionItems, latestSalary.earnings, true),
-      );
-      setDeductions(
-        buildValuesFromSalary(deductionItems, latestSalary.deductions),
-      );
-    } else {
-      setEarnings(createDefaultMap(additionItems, true));
-      setDeductions(createDefaultMap(deductionItems));
-    }
-    setIsModalOpen(true);
-  };
-
-  const filteredEmployees = employees.filter((emp) => {
-    const nameStr = emp.name || "";
-    const idStr = emp.employeeId || "";
-    const matchesSearch =
-      nameStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      idStr.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
-  });
+    return () => {
+      isCancelled = true;
+    };
+  }, [
+    isModalOpen,
+    isItemsLoading,
+    selectedUser,
+    selectedSalaryMonth,
+    selectedSalaryYear,
+    additionItems,
+    deductionItems,
+  ]);
 
   return (
     <div className="p-8">
@@ -279,10 +418,7 @@ export default function EmployeeSalary() {
             <Download className="w-4 h-4" /> Export
           </button>
           <button
-            onClick={() => {
-              resetForm();
-              setIsModalOpen(true);
-            }}
+            onClick={openForNewSalary}
             className="flex items-center gap-2 px-4 py-2 bg-[#1a5f3f] text-white rounded-lg hover:bg-[#155233] transition-colors shadow-sm font-semibold"
           >
             <Plus className="w-4 h-4" /> Add Salary
@@ -296,7 +432,6 @@ export default function EmployeeSalary() {
             Employee Salary List
           </h2>
         </div>
-
         <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row gap-4 items-center justify-between bg-white text-sm">
           <div className="flex items-center gap-4 w-full sm:w-auto">
             <div className="flex items-center gap-2">
@@ -309,16 +444,14 @@ export default function EmployeeSalary() {
               <span className="text-gray-600">Entries</span>
             </div>
           </div>
-          <div className="flex items-center gap-4 w-full sm:w-auto">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5f3f] bg-white min-w-[120px] font-medium"
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <button
+              onClick={openFilterModal}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg bg-white font-medium hover:bg-gray-50"
             >
-              <option value="all">Status (All)</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
+              <SlidersHorizontal className="w-4 h-4" />
+              Filter
+            </button>
             <div className="relative w-full sm:w-64">
               <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
@@ -336,126 +469,84 @@ export default function EmployeeSalary() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200 text-left">
               <tr>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900">
-                  Emp ID
-                </th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900">
-                  Employee Name
-                </th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900">
-                  Email
-                </th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900">
-                  Designation
-                </th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900">
-                  Salary
-                </th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900 text-center">
-                  Payslip
-                </th>
-                <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">
-                  Actions
-                </th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-900">Emp ID</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-900">Employee Name</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-900">Email</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-900">Designation</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-900">Month</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-900">Salary</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-900 text-center">Payslip</th>
+                <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {isLoading ? (
+              {isLoading || isRowsLoading ? (
                 <tr>
-                  <td
-                    colSpan={7}
-                    className="px-6 py-8 text-center text-gray-500"
-                  >
-                    Loading employees...
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                    Loading salaries...
                   </td>
                 </tr>
-              ) : filteredEmployees.length === 0 ? (
+              ) : rows.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={7}
-                    className="px-6 py-8 text-center text-gray-500"
-                  >
-                    No employees found.
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                    No salary records found.
                   </td>
                 </tr>
               ) : (
-                filteredEmployees.map((emp) => {
-                  const latestSalary = emp.salaries?.[0];
-                  return (
-                    <tr
-                      key={emp.id}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-6 py-4 text-sm text-[#1a5f3f] font-bold">
-                        {emp.employeeId}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-[#1a5f3f] flex items-center justify-center text-white font-bold text-xs shadow-sm overflow-hidden">
-                            {emp.profilePhotoUrl ? (
-                              <img
-                                src={emp.profilePhotoUrl}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              emp.name
-                                ?.split(" ")
-                                .map((n: string) => n[0])
-                                .join("") || "?"
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-bold text-gray-900">
-                              {emp.name}
-                            </p>
-                            <p className="text-xs text-gray-500">{emp.email}</p>
-                          </div>
+                rows.map((row) => (
+                  <tr key={row.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 text-sm text-[#1a5f3f] font-bold">
+                      {row.user?.employeeId || "-"}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-[#1a5f3f] flex items-center justify-center text-white font-bold text-xs shadow-sm overflow-hidden">
+                          {row.user?.profilePhotoUrl ? (
+                            <img src={row.user.profilePhotoUrl} className="w-full h-full object-cover" />
+                          ) : (
+                            row.user?.name?.split(" ").map((n: string) => n[0]).join("") || "?"
+                          )}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {emp.email}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-700 font-medium">
-                        {emp.designation?.name || "-"}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 font-bold">
-                        {latestSalary?.netSalary ? (
-                          <div className="flex items-center gap-1">
-                            <span className="text-md font-black ">
-                              ৳
-                            </span>
-                            <span>
-                              {Number(latestSalary.netSalary).toLocaleString()}
-                            </span>
-                          </div>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <Link
-                          to={`/payroll/payslip/${emp.id}`}
-                          className="px-4 py-1.5 bg-[#2a2a2a] text-white rounded-lg text-xs font-bold hover:bg-black transition-all inline-block"
+                        <div>
+                          <p className="font-bold text-gray-900">{row.user?.name || "-"}</p>
+                          <p className="text-xs text-gray-500">{row.user?.email || "-"}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{row.user?.email || "-"}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700 font-medium">
+                      {row.user?.designation?.name || "-"}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-700 font-medium">{buildMonthLabel(row)}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900 font-bold">
+                      <div className="flex items-center gap-1">
+                        <span className="text-md font-black ">৳</span>
+                        <span>{Number(row.netSalary).toLocaleString()}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <Link
+                        to={`/payroll/payslip/${row.userId}`}
+                        className="px-4 py-1.5 bg-[#2a2a2a] text-white rounded-lg text-xs font-bold hover:bg-black transition-all inline-block"
+                      >
+                        Generate Slip
+                      </Link>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-3">
+                        <button
+                          onClick={() => openForExistingSalary(row)}
+                          className="p-1.5 text-gray-400 hover:text-[#1a5f3f] hover:bg-green-50 rounded-lg transition-all"
                         >
-                          Generate Slip
-                        </Link>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-3">
-                          <button
-                            onClick={() => handleEdit(emp)}
-                            className="p-1.5 text-gray-400 hover:text-[#1a5f3f] hover:bg-green-50 rounded-lg transition-all"
-                          >
-                            <Edit className="w-5 h-5" />
-                          </button>
-                          <button className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                          <Edit className="w-5 h-5" />
+                        </button>
+                        <button className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
@@ -463,7 +554,7 @@ export default function EmployeeSalary() {
 
         <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-white">
           <p className="text-sm text-gray-600 font-medium">
-            Showing 1 - {filteredEmployees.length} of {employees.length} entries
+            Showing 1 - {rows.length} of {rows.length} entries
           </p>
           <div className="flex gap-2">
             <button className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-600">
@@ -479,6 +570,97 @@ export default function EmployeeSalary() {
         </div>
       </div>
 
+      {isFilterModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-800">Filter Salaries</h3>
+              <button
+                onClick={() => setIsFilterModalOpen(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
+                  Month
+                </label>
+                <select
+                  value={draftFilterMonth}
+                  onChange={(e) => setDraftFilterMonth(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5f3f]"
+                >
+                  <option value="">All</option>
+                  {MONTH_OPTIONS.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
+                  Year
+                </label>
+                <select
+                  value={draftFilterYear}
+                  onChange={(e) => setDraftFilterYear(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5f3f]"
+                >
+                  <option value="">All</option>
+                  {yearOptions.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
+                  Min Salary
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={draftMinSalary}
+                  onChange={(e) => setDraftMinSalary(e.target.value)}
+                  placeholder="0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5f3f]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
+                  Max Salary
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={draftMaxSalary}
+                  onChange={(e) => setDraftMaxSalary(e.target.value)}
+                  placeholder="0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5f3f]"
+                />
+              </div>
+            </div>
+            <div className="p-5 border-t border-gray-100 flex justify-end gap-3">
+              <button
+                onClick={clearFilters}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Clear
+              </button>
+              <button
+                onClick={applyFilters}
+                className="px-4 py-2 bg-[#1a5f3f] text-white rounded-lg hover:bg-[#155233]"
+              >
+                Apply Filter
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl animate-in fade-in zoom-in duration-200 mt-20 mb-20">
@@ -495,14 +677,14 @@ export default function EmployeeSalary() {
             </div>
 
             <form onSubmit={handleAddSalary} className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div>
                   <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
                     Employee Name
                   </label>
                   <select
                     value={selectedUser}
-                    onChange={(e) => handleUserChange(e.target.value)}
+                    onChange={(e) => setSelectedUser(e.target.value)}
                     required
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5f3f] focus:bg-white transition-all font-medium text-sm"
                   >
@@ -516,12 +698,44 @@ export default function EmployeeSalary() {
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+                    Salary Month
+                  </label>
+                  <select
+                    value={selectedSalaryMonth}
+                    onChange={(e) => setSelectedSalaryMonth(e.target.value)}
+                    required
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5f3f] focus:bg-white transition-all font-medium text-sm"
+                  >
+                    {MONTH_OPTIONS.map((month) => (
+                      <option key={month.value} value={month.value}>
+                        {month.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+                    Salary Year
+                  </label>
+                  <select
+                    value={selectedSalaryYear}
+                    onChange={(e) => setSelectedSalaryYear(e.target.value)}
+                    required
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5f3f] focus:bg-white transition-all font-medium text-sm"
+                  >
+                    {yearOptions.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
                     Net Salary
                   </label>
                   <div className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-800 text-sm flex items-center gap-1">
-                    <span className="text-md font-black ">
-                      ৳
-                    </span>
+                    <span className="text-md font-black ">৳</span>
                     <span>{netSalary.toLocaleString()}</span>
                   </div>
                 </div>
@@ -538,24 +752,13 @@ export default function EmployeeSalary() {
                     <p className="text-sm text-gray-500 col-span-full">
                       Loading payroll items...
                     </p>
-                  ) : additionItems.length === 0 ? (
-                    <SalaryInput
-                      label={BASIC_FIELD}
-                      value={earnings[BASIC_FIELD] ?? ""}
-                      onChange={(val) =>
-                        setEarnings((prev) => ({ ...prev, [BASIC_FIELD]: val }))
-                      }
-                    />
                   ) : (
                     <>
                       <SalaryInput
                         label={BASIC_FIELD}
                         value={earnings[BASIC_FIELD] ?? ""}
                         onChange={(val) =>
-                          setEarnings((prev) => ({
-                            ...prev,
-                            [BASIC_FIELD]: val,
-                          }))
+                          setEarnings((prev) => ({ ...prev, [BASIC_FIELD]: val }))
                         }
                       />
                       {additionItems.map((item) => (
@@ -564,10 +767,7 @@ export default function EmployeeSalary() {
                           label={item.name}
                           value={earnings[item.name] ?? ""}
                           onChange={(val) =>
-                            setEarnings((prev) => ({
-                              ...prev,
-                              [item.name]: val,
-                            }))
+                            setEarnings((prev) => ({ ...prev, [item.name]: val }))
                           }
                         />
                       ))}
@@ -598,10 +798,7 @@ export default function EmployeeSalary() {
                         label={item.name}
                         value={deductions[item.name] ?? ""}
                         onChange={(val) =>
-                          setDeductions((prev) => ({
-                            ...prev,
-                            [item.name]: val,
-                          }))
+                          setDeductions((prev) => ({ ...prev, [item.name]: val }))
                         }
                       />
                     ))
@@ -621,7 +818,7 @@ export default function EmployeeSalary() {
                   type="submit"
                   className="px-8 py-2.5 bg-[#1a5f3f] text-white rounded-lg hover:bg-[#155233] transition-colors font-bold text-sm shadow-lg shadow-green-900/10"
                 >
-                  Add Employee Salary
+                  Save Employee Salary
                 </button>
               </div>
             </form>
