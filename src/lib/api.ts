@@ -1,6 +1,8 @@
 // api.ts
-const RAW_API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
-const API_BASE_URL = RAW_API_BASE_URL.replace(/\/+$/, "");
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "/api").replace(
+  /\/+$/,
+  "",
+);
 
 const buildUrl = (endpoint: string) => {
   const safeEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
