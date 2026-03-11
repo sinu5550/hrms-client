@@ -527,7 +527,7 @@ export default function EmployeeDetail() {
                             </td>
                             <td className="px-6 py-4 text-right">
                               <Link
-                                to={`/payroll/payslip/${employee.id}`}
+                                to={`/payroll/payslip/${sal.id}`}
                                 className="p-2 text-[#1a5f3f] hover:underline text-sm font-bold"
                               >
                                 View Slip

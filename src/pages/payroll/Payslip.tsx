@@ -1,43 +1,93 @@
 import { useParams, Link } from "react-router";
-import { Download, ChevronRight, Home } from "lucide-react";
+import { Download, ChevronRight, Home, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { api } from "../../lib/api";
+
+interface CompanySettings {
+  companyName: string;
+  address: string;
+  phone: string;
+  email: string;
+  logoUrl: string | null;
+}
+
+interface SalaryRecord {
+  id: string;
+  payslipNo: string;
+  month: string;
+  year: string;
+  salaryMonth?: number;
+  salaryYear?: number;
+  salaryMonthLabel?: string;
+  amount: number;
+  netSalary: number;
+  earnings: Record<string, number>;
+  deductions: Record<string, number>;
+  user: {
+    id: string;
+    employeeId: string;
+    name: string;
+    email: string;
+    phone: string;
+    joiningDate: string;
+    designation?: { name: string };
+    department?: { name: string };
+  };
+}
 
 export default function Payslip() {
-  useParams();
+  const { id } = useParams();
+  const [salary, setSalary] = useState<SalaryRecord | null>(null);
+  const [settings, setSettings] = useState<CompanySettings | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const payslip = {
-    payslipNo: "#PS4283",
-    salaryMonth: "October 2024",
-    employeeId: "EMP-001",
-    employeeName: "Anthony Lewis",
-    designation: "Web Designer",
-    department: "Engineering",
-    joiningDate: "2024-09-12",
-    companyName: "XYZ Technologies",
-    companyAddress: "2077 Chicago Avenue Orosi, CA 93647",
-    companyEmail: "xyztech@example.com",
-    companyPhone: "+1 987 654 3210",
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const [salaryData, settingsData] = await Promise.all([
+          api.get(`/payroll/salaries/${id}`),
+          api.get("/settings"),
+        ]);
+        setSalary(salaryData);
+        setSettings(settingsData);
+      } catch (err) {
+        console.error("Failed to fetch payslip data", err);
+        setError("Failed to load payslip information. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [id]);
 
-    earnings: [
-      { name: "Basic Salary", amount: 3000 },
-      { name: "House Rent Allowance (H.R.A.)", amount: 1000 },
-      { name: "Conveyance", amount: 200 },
-      { name: "Other Allowance", amount: 100 },
-    ],
+  if (loading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#1a5f3f]" />
+      </div>
+    );
+  }
 
-    deductions: [
-      { name: "Tax Deducted at Source (T.D.S.)", amount: 200 },
-      { name: "Provident Fund", amount: 300 },
-      { name: "ESI", amount: 150 },
-      { name: "Loan", amount: 50 },
-    ],
-  };
+  if (error || !salary) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-red-600 mb-4">{error || "Payslip not found"}</p>
+        <Link to="/payroll/salaries" className="text-[#1a5f3f] hover:underline font-medium">
+          Back to Salaries
+        </Link>
+      </div>
+    );
+  }
 
-  const totalEarnings = payslip.earnings.reduce((sum, e) => sum + e.amount, 0);
-  const totalDeductions = payslip.deductions.reduce(
-    (sum, d) => sum + d.amount,
-    0,
-  );
-  const netSalary = totalEarnings - totalDeductions;
+  const earningsList = Object.entries(salary.earnings || {}).map(([name, amount]) => ({ name, amount: Number(amount) }));
+  const deductionsList = Object.entries(salary.deductions || {}).map(([name, amount]) => ({ name, amount: Number(amount) }));
+
+  const totalEarnings = earningsList.reduce((sum, e) => sum + e.amount, 0);
+  const totalDeductions = deductionsList.reduce((sum, d) => sum + d.amount, 0);
+
+  const displayMonth = salary.salaryMonthLabel || `${salary.month} ${salary.year}`;
 
   return (
     <div className="p-8">
@@ -50,77 +100,86 @@ export default function Payslip() {
               <Home className="w-4 h-4" />
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <span>Payroll</span>
+            <Link to="/payroll/salaries" className="hover:text-[#1a5f3f] transition-colors">
+              Payroll
+            </Link>
             <ChevronRight className="w-4 h-4" />
             <span className="text-[#1a5f3f] font-medium">Payslip</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#2a2a2a] text-white rounded-lg hover:bg-black transition-colors font-semibold">
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-2 px-4 py-2 bg-[#2a2a2a] text-white rounded-lg hover:bg-black transition-colors font-semibold"
+          >
             <Download className="w-4 h-4" /> Download
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 md:p-12 max-w-5xl mx-auto">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 md:p-12 max-w-5xl mx-auto printable-area">
         {/* Company & Payslip Header */}
-        <div className="flex flex-col md:flex-row justify-between gap-8 mb-12">
+        <div className="flex flex-col md:flex-row print:flex-row justify-between gap-8 mb-12">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-[#1a5f3f] rounded-full flex items-center justify-center text-white font-bold text-2xl">
-              S
-            </div>
+            {settings?.logoUrl ? (
+              <img src={settings.logoUrl} alt="Logo" className="w-16 h-16 object-contain" />
+            ) : (
+              <div className="w-12 h-12 bg-[#1a5f3f] rounded-lg flex items-center justify-center text-white font-bold text-2xl uppercase">
+                {settings?.companyName?.[0] || 'S'}
+              </div>
+            )}
             <div>
-              <h2 className="text-2xl font-bold tracking-tight">SmartHR</h2>
-              <p className="text-sm text-gray-400 mt-1">
-                3099 Kennedy Court Framingham, MA 01702
+              <h2 className="text-2xl font-bold tracking-tight">{settings?.companyName || 'SmartHR'}</h2>
+              <p className="text-sm text-gray-500 mt-1 whitespace-pre-line">
+                {settings?.address}
               </p>
             </div>
           </div>
-          <div className="text-left md:text-right">
+          <div className="text-left md:text-right print:text-right">
             <h3 className="text-lg font-bold text-[#1a5f3f]">
-              Payslip No {payslip.payslipNo}
+              Payslip {salary.payslipNo}
             </h3>
             <p className="text-sm text-gray-500 font-medium">
-              Salary Month :{" "}
-              <span className="text-gray-900">{payslip.salaryMonth}</span>
+              Salary Period :{" "}
+              <span className="text-gray-900">{displayMonth}</span>
             </p>
           </div>
         </div>
 
         {/* Addresses */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-12 mb-12">
           <div>
             <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
               From
             </h4>
             <p className="font-bold text-lg text-gray-900">
-              {payslip.companyName}
+              {settings?.companyName}
             </p>
-            <p className="text-gray-500 mt-1">{payslip.companyAddress}</p>
-            <p className="text-gray-500">Email : {payslip.companyEmail}</p>
-            <p className="text-gray-500">Phone : {payslip.companyPhone}</p>
+            <p className="text-gray-500 mt-1">{settings?.address}</p>
+            {settings?.email && <p className="text-gray-500">Email : {settings.email}</p>}
+            {settings?.phone && <p className="text-gray-500">Phone : {settings.phone}</p>}
           </div>
           <div>
             <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
               To
             </h4>
             <p className="font-bold text-lg text-gray-900">
-              {payslip.employeeName}
+              {salary.user.name}
             </p>
-            <p className="text-gray-500 mt-1">{payslip.designation}</p>
-            <p className="text-gray-500">Email : anthony@example.com</p>
-            <p className="text-gray-500">Phone : +1 458 268 4739</p>
+            <p className="text-gray-500 mt-1">{salary.user.designation?.name || 'Employee'}</p>
+            <p className="text-gray-500">Employee ID: {salary.user.employeeId}</p>
+            <p className="text-gray-500">Joining Date: {salary.user.joiningDate ? new Date(salary.user.joiningDate).toLocaleDateString() : 'N/A'}</p>
           </div>
         </div>
 
         <div className="text-center mb-8">
           <p className="font-bold text-gray-900 text-lg border-b-2 border-[#1a5f3f]/20 inline-block pb-1 px-4">
-            Payslip for the month of {payslip.salaryMonth}
+            Payslip for {displayMonth}
           </p>
         </div>
 
         {/* Earnings & Deductions Tables */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 print:grid-cols-2 gap-8 mb-8">
           {/* Earnings */}
           <div className="bg-gray-50 rounded-lg overflow-hidden border border-gray-100">
             <div className="px-6 py-4 border-b border-gray-200/50 bg-white">
@@ -129,20 +188,20 @@ export default function Payslip() {
             <div className="p-2">
               <table className="w-full">
                 <tbody>
-                  {payslip.earnings.map((e, idx) => (
+                  {earningsList.map((e, idx) => (
                     <tr key={idx}>
-                      <td className="px-4 py-3 text-gray-600 font-medium">
+                      <td className="px-4 py-3 text-gray-600 font-medium whitespace-normal">
                         {e.name}
                       </td>
-                      <td className="px-4 py-3 text-right font-bold text-gray-900">
-                        ${e.amount}
+                      <td className="px-4 py-3 text-right  text-gray-900 text-sm font-semibold">
+                        <div className="font-black inline">৳</div>{e.amount.toLocaleString()}
                       </td>
                     </tr>
                   ))}
                   <tr className="border-t border-gray-200 bg-white text-[#1a5f3f]">
                     <td className="px-4 py-4 font-bold">Total Earnings</td>
                     <td className="px-4 py-4 text-right font-black">
-                      ${totalEarnings}
+                      ৳{totalEarnings.toLocaleString()}
                     </td>
                   </tr>
                 </tbody>
@@ -158,20 +217,20 @@ export default function Payslip() {
             <div className="p-2">
               <table className="w-full">
                 <tbody>
-                  {payslip.deductions.map((d, idx) => (
+                  {deductionsList.map((d, idx) => (
                     <tr key={idx}>
-                      <td className="px-4 py-3 text-gray-600 font-medium">
+                      <td className="px-4 py-3 text-gray-600 font-medium whitespace-normal">
                         {d.name}
                       </td>
-                      <td className="px-4 py-3 text-right font-bold text-gray-900">
-                        ${d.amount}
+                      <td className="px-4 py-3 text-right font-semibold text-md text-gray-900 shrink-0">
+                        <div className="font-black inline">৳</div>{d.amount.toLocaleString()}
                       </td>
                     </tr>
                   ))}
                   <tr className="border-t border-gray-200 bg-white text-red-600">
                     <td className="px-4 py-4 font-bold">Total Deductions</td>
                     <td className="px-4 py-4 text-right font-black">
-                      ${totalDeductions}
+                      ৳{totalDeductions.toLocaleString()}
                     </td>
                   </tr>
                 </tbody>
@@ -182,15 +241,12 @@ export default function Payslip() {
 
         {/* Net Salary Footer */}
         <div className="bg-gray-50 rounded-lg p-6 border border-gray-100">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex flex-col md:flex-row print:flex-row justify-between items-center gap-4">
             <div>
-              <p className="text-gray-500 font-bold flex items-center gap-2">
+              <p className="text-gray-500 font-bold flex flex-wrap items-center gap-2">
                 Net Salary :{" "}
                 <span className="text-[#1a5f3f] text-2xl font-black">
-                  ${netSalary}
-                </span>
-                <span className="text-sm font-medium text-gray-400 ml-2">
-                  (Three thousand six hundred only)
+                  ৳{salary.netSalary.toLocaleString()}
                 </span>
               </p>
             </div>
@@ -201,6 +257,30 @@ export default function Payslip() {
           </div>
         </div>
       </div>
+
+      <style>{`
+        @media print {
+          @page {
+            margin: 10mm;
+          }
+          body * {
+            visibility: hidden;
+          }
+          .printable-area, .printable-area * {
+            visibility: visible;
+          }
+          .printable-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

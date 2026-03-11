@@ -526,7 +526,7 @@ export default function EmployeeSalary() {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <Link
-                        to={`/payroll/payslip/${row.userId}`}
+                        to={`/payroll/payslip/${row.id}`}
                         className="px-4 py-1.5 bg-[#2a2a2a] text-white rounded-lg text-xs font-bold hover:bg-black transition-all inline-block"
                       >
                         Generate Slip
